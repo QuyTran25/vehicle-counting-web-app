@@ -1,0 +1,45 @@
+# Database
+database.db
+*.db
+
+# YOLO Model
+models/yolov8n.pt
+models/*.pt
+
+# Uploaded videos
+uploads/*
+!uploads/.gitkeep
+
+# Output files
+outputs/*
+!outputs/.gitkeep
+
+# Python environment
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary files
+*.tmp
+.cache/
+
+# Test outputs
+.pytest_cache/
+htmlcov/
