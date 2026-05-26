@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"d:/vehicle-counting-web-app/index.html\")"
+    ]
+  }
+}

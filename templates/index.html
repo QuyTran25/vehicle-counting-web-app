@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrafficMonitor</title>
+  <link rel="stylesheet" href="vars.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <div class="sidebar-brand">
+          <h1>TrafficMonitor</h1>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="sidebar-link active" data-page="dashboard" href="#" onclick="switchPage('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+          </a>
+          <a class="sidebar-link" data-page="history" href="#" onclick="switchPage('history')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            History
+          </a>
+        </nav>
+      </div>
+      <div class="sidebar-bottom">
+        <button class="sidebar-upload-btn" onclick="switchPage('dashboard')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Video
+        </button>
+        <div class="sidebar-divider">
+          <a class="sidebar-link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Support
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <div class="main-area">
+
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="search-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-box" type="text" placeholder="Tìm kiếm dữ liệu...">
+          </div>
+        </div>
+        <div class="header-icons">
+          <button class="header-icon-btn" title="Thông báo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+          <button class="header-icon-btn" title="Tài khoản">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+          <button class="header-icon-btn" title="Cài đặt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+
+        <!-- ========== DASHBOARD PAGE ========== -->
+        <div id="page-dashboard" class="page-view page-dashboard active">
+
+          <!-- Hero Grid: Video + Stats -->
+          <div class="hero-grid">
+
+            <!-- Video Card -->
+            <div class="video-card">
+              <div class="video-card-header">
+                <h2>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  Tải lên &amp; Xử lý Video
+                </h2>
+                <div class="status-badge">
+                  <span class="status-dot"></span>
+                  ĐANG XỬ LÝ
+                </div>
+              </div>
+              <div class="drop-zone">
+                <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p class="drop-main">Kéo thả file vào đây</p>
+                <p class="drop-sub">hoặc click để chọn tệp tin (MP4, AVI, MOV)</p>
+              </div>
+              <div class="progress-section">
+                <div class="progress-info">
+                  <span class="progress-label">Tiến độ phân tích: 68%</span>
+                  <span class="progress-time">12:45 / 18:30</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="stats-panel">
+              <h3>THỐNG KÊ TỔNG QUAN</h3>
+              <div class="total-label">Tổng số phương tiện</div>
+              <div class="total-number">1,284</div>
+              <div class="in-out-grid">
+                <div class="in-out-card">
+                  <div class="label">TỔNG VÀO</div>
+                  <div class="value value-in">742</div>
+                </div>
+                <div class="in-out-card">
+                  <div class="label">TỔNG RA</div>
+                  <div class="value value-out">542</div>
+                </div>
+              </div>
+              <div class="separator"></div>
+              <div class="vehicle-rows">
+                <!-- Xe máy -->
+                <div class="vehicle-row">
+                  <div class="vehicle-row-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>
+                    <span class="vehicle-name">Xe máy</span>
+                  </div>
+                  <div class="vehicle-counts">
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">VÀO</div>
+                      <div class="vc-value vc-value-in">450</div>
+                    </div>
+                    <div class="vehicle-count-divider"></div>
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">RA</div>
+                      <div class="vc-value vc-value-out">392</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Ô tô -->
+                <div class="vehicle-row">
+                  <div class="vehicle-row-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2M5 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm14 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+                    <span class="vehicle-name">Ô tô</span>
+                  </div>
+                  <div class="vehicle-counts">
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">VÀO</div>
+                      <div class="vc-value vc-value-in">210</div>
+                    </div>
+                    <div class="vehicle-count-divider"></div>
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">RA</div>
+                      <div class="vc-value vc-value-out">111</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Xe buýt -->
+                <div class="vehicle-row">
+                  <div class="vehicle-row-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><path d="M4 16V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10"/><rect x="2" y="16" width="20" height="4" rx="2"/><path d="M6 20v2M18 20v2M6 10h.01M18 10h.01M6 14h12"/></svg>
+                    <span class="vehicle-name">Xe buýt</span>
+                  </div>
+                  <div class="vehicle-counts">
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">VÀO</div>
+                      <div class="vc-value vc-value-in">25</div>
+                    </div>
+                    <div class="vehicle-count-divider"></div>
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">RA</div>
+                      <div class="vc-value vc-value-out">20</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Xe tải -->
+                <div class="vehicle-row">
+                  <div class="vehicle-row-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    <span class="vehicle-name">Xe tải</span>
+                  </div>
+                  <div class="vehicle-counts">
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">VÀO</div>
+                      <div class="vc-value vc-value-in">57</div>
+                    </div>
+                    <div class="vehicle-count-divider"></div>
+                    <div class="vehicle-count-item">
+                      <div class="vc-label">RA</div>
+                      <div class="vc-value vc-value-out">19</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Traffic Flow Chart -->
+          <div class="chart-section">
+            <div class="chart-header">
+              <div>
+                <h2>Lưu lượng theo thời gian</h2>
+                <p>Biểu đồ tổng hợp các phương tiện di chuyển trong khu vực</p>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <span class="legend-dot legend-dot-in"></span>
+                  Số xe vào
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-dot-out"></span>
+                  Số xe ra
+                </div>
+              </div>
+            </div>
+            <div class="chart-area">
+              <svg width="100%" height="100%" viewBox="0 0 800 200" preserveAspectRatio="none">
+                <line x1="0" y1="50" x2="800" y2="50" stroke="#e5eeff" stroke-width="1"/>
+                <line x1="0" y1="100" x2="800" y2="100" stroke="#e5eeff" stroke-width="1"/>
+                <line x1="0" y1="150" x2="800" y2="150" stroke="#e5eeff" stroke-width="1"/>
+                <polyline points="0,160 60,140 120,120 180,80 240,60 300,90 360,50 420,70 480,40 540,80 600,100 660,110 720,130 780,150 800,160" fill="none" stroke="#0041c8" stroke-width="2.5"/>
+                <polyline points="0,170 60,155 120,140 180,110 240,90 300,120 360,80 420,100 480,70 540,100 600,120 660,130 720,145 780,155 800,165" fill="none" stroke="#924c00" stroke-width="2.5"/>
+              </svg>
+            </div>
+            <div class="chart-time-axis">
+              <span>00:00</span>
+              <span>04:00</span>
+              <span>08:00</span>
+              <span>12:00</span>
+              <span>16:00</span>
+              <span>20:00</span>
+              <span>24:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== HISTORY PAGE ========== -->
+        <div id="page-history" class="page-view page-history">
+
+          <!-- Filters -->
+          <div class="filters-bar">
+            <div class="filter-group">
+              <label>KHOẢNG THỜI GIAN</label>
+              <div class="date-range">
+                <input type="date" value="2023-10-24">
+                <span class="date-range-sep">&#8594;</span>
+                <input type="date" value="2023-10-25">
+              </div>
+            </div>
+            <button class="btn-apply">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              Áp dụng bộ lọc
+            </button>
+          </div>
+
+          <!-- Video Log Table -->
+          <div class="table-card">
+            <div class="table-header-bar">
+              <h3>Danh sách Video đã xử lý</h3>
+              <button class="btn-export">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Xuất Excel
+              </button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>VIDEO</th>
+                    <th>THỜI LƯỢNG</th>
+                    <th>TỔNG SỐ XE</th>
+                    <th>CHI TIẾT</th>
+                    <th>ĐỘ TIN CẬY</th>
+                    <th style="text-align:right">HÀNH ĐỘNG</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="video-info">
+                        <div class="video-thumb">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                        <div>
+                          <div class="video-name">CCTV_Intersection_01_A.mp4</div>
+                          <div class="video-date">24/10/2023 - 14:22:45</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="cell-duration">15:30</td>
+                    <td class="cell-total">1,242</td>
+                    <td>
+                      <div class="detail-badges">
+                        <span class="detail-badge">🏍 450</span>
+                        <span class="detail-badge">🚗 680</span>
+                        <span class="detail-badge">🚌 12</span>
+                        <span class="detail-badge">🚛 100</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="confidence">
+                        <span class="confidence-text">96.5%</span>
+                        <div class="confidence-track"><div class="confidence-fill" style="width:96.5%"></div></div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button class="action-btn" title="Xem chi tiết">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button class="action-btn" title="Tải xuống">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="video-info">
+                        <div class="video-thumb">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                        <div>
+                          <div class="video-name">Toll_Gate_Night_Stream.mkv</div>
+                          <div class="video-date">24/10/2023 - 22:15:00</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="cell-duration">45:00</td>
+                    <td class="cell-total">3,890</td>
+                    <td>
+                      <div class="detail-badges">
+                        <span class="detail-badge">🏍 2.1k</span>
+                        <span class="detail-badge">🚗 1.5k</span>
+                        <span class="detail-badge">🚌 290</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="confidence">
+                        <span class="confidence-text">88.2%</span>
+                        <div class="confidence-track"><div class="confidence-fill" style="width:88.2%"></div></div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button class="action-btn" title="Xem chi tiết">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button class="action-btn" title="Tải xuống">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="video-info">
+                        <div class="video-thumb">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#0041c8" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                        <div>
+                          <div class="video-name">Highway_67_RushHour.avi</div>
+                          <div class="video-date">24/10/2023 - 07:30:12</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="cell-duration">60:00</td>
+                    <td class="cell-total">5,120</td>
+                    <td>
+                      <div class="detail-badges">
+                        <span class="detail-badge">🏍 3.2k</span>
+                        <span class="detail-badge">🚗 1.8k</span>
+                        <span class="detail-badge">🚛 120</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="confidence">
+                        <span class="confidence-text">94.1%</span>
+                        <div class="confidence-track"><div class="confidence-fill" style="width:94.1%"></div></div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button class="action-btn" title="Xem chi tiết">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button class="action-btn" title="Tải xuống">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span class="pagination-info">Hiển thị 1 - 25 của 1,420 video</span>
+              <div class="pagination-btns">
+                <button class="page-btn" aria-label="Trang trước">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <span style="color:var(--text-muted); font-family:var(--font-body); padding:0 4px;">...</span>
+                <button class="page-btn">57</button>
+                <button class="page-btn" aria-label="Trang sau">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Page switching
+    function switchPage(page) {
+      document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sidebar-link[data-page]').forEach(el => el.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      document.querySelector('.sidebar-link[data-page="' + page + '"]').classList.add('active');
+      closeSidebar();
+    }
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('active');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('active');
+    }
+
+    // Close sidebar on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
+  </script>
+</body>
+</html>
