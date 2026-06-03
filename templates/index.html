@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Detection - Upload & Track</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8e9ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area i {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-area p {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-area span {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.2s ease;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .task-list {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .task-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .task-item {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-item h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .task-item p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 3px;
+        }
+
+        .task-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+
+        .status-queued {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processing {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s ease;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #764ba2;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #cc5555;
+        }
+
+        .no-tasks {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+
+        .no-tasks p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .result-summary {
+            margin-bottom: 20px;
+        }
+
+        .result-summary h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            background: #f8f9ff;
+            padding: 12px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .summary-item .label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .summary-item .value {
+            color: #333;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🚗 Vehicle Detection System</h1>
+            <p>Real-time vehicle detection, tracking, and analysis</p>
+        </header>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2>Upload Your Video</h2>
+            <div class="upload-area" id="uploadArea">
+                <p>📹 Drag your video here or click to browse</p>
+                <span>Supported formats: MP4, AVI, MOV, MKV (Max 500MB)</span>
+            </div>
+            <input type="file" id="fileInput" accept="video/*">
+        </div>
+
+        <!-- Task List Section -->
+        <div class="task-list">
+            <h2>Processing Queue</h2>
+            <div id="taskContainer">
+                <div class="no-tasks">
+                    <p>📋 No videos uploaded yet</p>
+                    <span>Upload a video to get started</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-header">
+                <h2>Detection Results</h2>
+            </div>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const taskContainer = document.getElementById('taskContainer');
+        const resultModal = document.getElementById('resultModal');
+
+        // Upload area drag-drop handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFileSelect(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            if (!file) return;
+            
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+
+            uploadVideo(file);
+        }
+
+        // Upload video to backend
+        async function uploadVideo(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const data = await response.json();
+                const taskId = data.task_id;
+
+                // Clear input
+                fileInput.value = '';
+
+                // Start polling for status
+                pollTaskStatus(taskId);
+
+                // Refresh task list
+                refreshTaskList();
+            } catch (error) {
+                alert('Error uploading video: ' + error.message);
+            }
+        }
+
+        // Poll task status
+        async function pollTaskStatus(taskId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/status/${taskId}`);
+                    if (!response.ok) throw new Error('Status check failed');
+
+                    const data = await response.json();
+                    updateTaskUI(taskId, data);
+
+                    if (data.status === 'done' || data.status === 'failed') {
+                        clearInterval(interval);
+                        refreshTaskList();
+                    }
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                    clearInterval(interval);
+                }
+            }, 1000); // Poll every second
+        }
+
+        // Update task UI
+        function updateTaskUI(taskId, status) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (!taskElement) return;
+
+            const progressFill = taskElement.querySelector('.progress-fill');
+            const statusBadge = taskElement.querySelector('.task-status');
+
+            if (progressFill) {
+                progressFill.style.width = status.progress + '%';
+            }
+
+            if (statusBadge) {
+                statusBadge.textContent = status.status.toUpperCase();
+                statusBadge.className = `task-status status-${status.status}`;
+            }
+        }
+
+        // Refresh task list
+        async function refreshTaskList() {
+            try {
+                const response = await fetch('/tasks?limit=10');
+                if (!response.ok) throw new Error('Failed to fetch tasks');
+
+                const data = await response.json();
+                const tasks = data.tasks;
+
+                if (tasks.length === 0) {
+                    taskContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No videos uploaded yet</p>
+                            <span>Upload a video to get started</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                taskContainer.innerHTML = tasks.map(task => `
+                    <div class="task-item" data-task-id="${task.id}">
+                        <div class="task-info">
+                            <h3>${task.filename}</h3>
+                            <p class="timestamp">${new Date(task.created_at).toLocaleString()}</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${task.progress}%"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span class="task-status status-${task.status}">${task.status.toUpperCase()}</span>
+                            ${task.status === 'done' ? `
+                                <button class="task-actions" onclick="viewResult('${task.id}')">
+                                    <button class="btn-view">View Results</button>
+                                </button>
+                            ` : ''}
+                            <button class="btn-delete" onclick="deleteTask('${task.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error refreshing tasks:', error);
+            }
+        }
+
+        // View result details
+        async function viewResult(taskId) {
+            try {
+                const response = await fetch(`/result/${taskId}`);
+                if (!response.ok) throw new Error('Failed to fetch result');
+
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                alert('Error loading results: ' + error.message);
+            }
+        }
+
+        // Display result in modal
+        function displayResult(result) {
+            const content = document.getElementById('resultContent');
+            const summary = result.summary;
+
+            content.innerHTML = `
+                <div class="result-summary">
+                    <h3>Detection Summary</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="label">🚗 Cars</div>
+                            <div class="value">${summary.car}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">🏍️ Motorcycles</div>
+                            <div class="value">${summary.motorcycle}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">🚌 Buses</div>
+                            <div class="value">${summary.bus}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">🚚 Trucks</div>
+                            <div class="value">${summary.truck}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-summary">
+                    <h3>Video Information</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="label">Duration</div>
+                            <div class="value">${result.metadata.video_duration.toFixed(1)}s</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">FPS</div>
+                            <div class="value">${result.metadata.fps.toFixed(1)}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">Resolution</div>
+                            <div class="value">${result.metadata.resolution}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="label">Frames</div>
+                            <div class="value">${result.metadata.total_frames}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-summary">
+                    <h3>Download Files</h3>
+                    <a href="${result.output_video}" target="_blank" class="btn">📹 Download Video</a>
+                    <a href="${result.output_json}" target="_blank" class="btn" style="background: #28a745; margin-left: 10px;">📊 Download JSON</a>
+                </div>
+            `;
+
+            resultModal.classList.add('show');
+        }
+
+        // Close modal
+        function closeModal() {
+            resultModal.classList.remove('show');
+        }
+
+        // Delete task
+        async function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+
+            try {
+                const response = await fetch(`/task/${taskId}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Delete failed');
+
+                refreshTaskList();
+            } catch (error) {
+                alert('Error deleting task: ' + error.message);
+            }
+        }
+
+        // Initial load
+        refreshTaskList();
+
+        // Auto-refresh task list every 2 seconds
+        setInterval(refreshTaskList, 2000);
+
+        // Close modal on outside click
+        resultModal.addEventListener('click', (e) => {
+            if (e.target === resultModal) closeModal();
+        });
+    </script>
+</body>
+</html>

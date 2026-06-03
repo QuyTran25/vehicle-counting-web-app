@@ -167,6 +167,70 @@ def get_result(task_id: str) -> dict | None:
     return data
 
 
+def list_tasks(limit: int = 20, offset: int = 0) -> list[dict]:
+    """Lấy danh sách task với phân trang."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_task(task_id: str) -> None:
+    """Xóa task và kết quả liên quan."""
+    conn = get_connection()
+    conn.execute("DELETE FROM results WHERE task_id = ?", (task_id,))
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+# ──────────────────────────────────────────
+# Database class wrapper for OOP-style usage
+# ──────────────────────────────────────────
+
+class Database:
+    """Class wrapper for database operations"""
+    
+    def __init__(self):
+        """Initialize database"""
+        init_db()
+    
+    def create_task(self, task_id: str, filename: str) -> None:
+        """Tạo task mới"""
+        create_task(task_id, filename)
+    
+    def update_task_status(self, task_id: str, status: str, progress: int = None, error_msg: str = None) -> None:
+        """Cập nhật trạng thái task"""
+        update_task_status(task_id, status, progress, error_msg)
+    
+    def get_task(self, task_id: str) -> dict | None:
+        """Lấy thông tin task"""
+        return get_task(task_id)
+    
+    def get_all_tasks(self) -> list[dict]:
+        """Lấy tất cả task"""
+        return get_all_tasks()
+    
+    def list_tasks(self, limit: int = 20, offset: int = 0) -> list[dict]:
+        """Lấy danh sách task với phân trang"""
+        return list_tasks(limit, offset)
+    
+    def save_result(self, task_id: str, result: dict) -> None:
+        """Lưu kết quả"""
+        save_result(task_id, result)
+    
+    def get_result(self, task_id: str) -> dict | None:
+        """Lấy kết quả task"""
+        return get_result(task_id)
+    
+    def delete_task(self, task_id: str) -> None:
+        """Xóa task"""
+        delete_task(task_id)
+
+
 # ──────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
