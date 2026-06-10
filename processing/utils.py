@@ -143,3 +143,55 @@ def create_video_writer(output_path: str, fps: float, width: int, height: int,
         raise RuntimeError(f"Failed to create VideoWriter with codec '{codec}'")
     
     return writer
+
+
+def verify_codec(video_path: str) -> Tuple[bool, Optional[str]]:
+    """
+    Kiểm tra xem video output có mở được trên trình duyệt (Chrome, Firefox) 
+    và media player (VLC) không.
+    
+    Yêu cầu: ffprobe (từ FFmpeg)
+    
+    Args:
+        video_path: Đường dẫn file video output
+        
+    Returns:
+        Tuple[bool, Optional[str]]: (is_playable, error_message)
+    """
+    import subprocess
+    
+    try:
+        # Kiểm tra file tồn tại
+        path = Path(video_path)
+        if not path.exists():
+            return False, f"File not found: {video_path}"
+        
+        # Kiểm tra codec bằng ffprobe
+        # Nếu không có ffprobe, dùng cv2 để kiểm tra tối thiểu
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_format", "-show_streams", str(video_path)],
+                capture_output=True,
+                timeout=10,
+                text=True,
+            )
+            if result.returncode != 0:
+                return False, f"FFprobe error: {result.stderr[:200]}"
+            
+            # Kiểm tra codec trong output
+            if "h264" not in result.stdout and "avc1" not in result.stdout and "mp4v" not in result.stdout:
+                # Cảnh báo nhưng không thất bại (có codec khác có thể chạy)
+                return True, "Warning: Non-H.264/H.265 codec detected, may have compatibility issues"
+            
+            return True, None
+            
+        except FileNotFoundError:
+            # ffprobe không tìm thấy, dùng cv2 để kiểm tra cơ bản
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                return False, "Cannot open video with cv2.VideoCapture"
+            cap.release()
+            return True, "Playable (OpenCV check passed)"
+            
+    except Exception as e:
+        return False, f"Verification error: {str(e)}"

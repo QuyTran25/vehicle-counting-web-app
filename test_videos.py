@@ -84,7 +84,7 @@ if __name__ == "__main__":
     print("🚗 Vehicle Detection + Tracking Test")
     print("=" * 60)
 
-    videos = ["test1lan.mp4", "test2lan.mp4"]
+    videos = ["test1lan.mp4", "test2lan.mp4", "test3lan.mp4"]
     all_results = {}
 
     for video in videos:
