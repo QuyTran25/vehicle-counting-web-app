@@ -1,0 +1,295 @@
+{
+  "metadata": {
+    "video_duration": 26.833,
+    "fps": 30.0,
+    "total_frames": 805,
+    "resolution": "720x1280",
+    "processed_frames": 805,
+    "line_position": {
+      "start": [
+        0,
+        704
+      ],
+      "end": [
+        720,
+        704
+      ]
+    }
+  },
+  "summary": {
+    "car": 2,
+    "motorcycle": 11,
+    "bus": 0,
+    "truck": 0,
+    "total": 13
+  },
+  "timeline": [
+    {
+      "second": 0,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 1,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 2,
+      "car": 1,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 3,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 4,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 5,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 6,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 7,
+      "car": 1,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 8,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 9,
+      "car": 0,
+      "motorcycle": 2,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 10,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 11,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 12,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 13,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 14,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 15,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 16,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 17,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 18,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 19,
+      "car": 0,
+      "motorcycle": 0,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 20,
+      "car": 0,
+      "motorcycle": 2,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 21,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    },
+    {
+      "second": 22,
+      "car": 0,
+      "motorcycle": 1,
+      "bus": 0,
+      "truck": 0
+    }
+  ],
+  "events": [
+    {
+      "frame": 80,
+      "timestamp": 2.667,
+      "track_id": 1109,
+      "class": "car",
+      "confidence": 0.5985,
+      "direction": "out"
+    },
+    {
+      "frame": 99,
+      "timestamp": 3.3,
+      "track_id": 1143,
+      "class": "motorcycle",
+      "confidence": 0.4343,
+      "direction": "out"
+    },
+    {
+      "frame": 236,
+      "timestamp": 7.867,
+      "track_id": 1133,
+      "class": "car",
+      "confidence": 0.6924,
+      "direction": "out"
+    },
+    {
+      "frame": 280,
+      "timestamp": 9.333,
+      "track_id": 1154,
+      "class": "motorcycle",
+      "confidence": 0.6503,
+      "direction": "out"
+    },
+    {
+      "frame": 291,
+      "timestamp": 9.7,
+      "track_id": 1164,
+      "class": "motorcycle",
+      "confidence": 0.5015,
+      "direction": "out"
+    },
+    {
+      "frame": 332,
+      "timestamp": 11.067,
+      "track_id": 1203,
+      "class": "motorcycle",
+      "confidence": 0.5764,
+      "direction": "out"
+    },
+    {
+      "frame": 414,
+      "timestamp": 13.8,
+      "track_id": 1272,
+      "class": "motorcycle",
+      "confidence": 0.628,
+      "direction": "out"
+    },
+    {
+      "frame": 537,
+      "timestamp": 17.9,
+      "track_id": 1337,
+      "class": "motorcycle",
+      "confidence": 0.6212,
+      "direction": "out"
+    },
+    {
+      "frame": 566,
+      "timestamp": 18.867,
+      "track_id": 1341,
+      "class": "motorcycle",
+      "confidence": 0.5868,
+      "direction": "out"
+    },
+    {
+      "frame": 600,
+      "timestamp": 20.0,
+      "track_id": 1352,
+      "class": "motorcycle",
+      "confidence": 0.4876,
+      "direction": "out"
+    },
+    {
+      "frame": 629,
+      "timestamp": 20.967,
+      "track_id": 1371,
+      "class": "motorcycle",
+      "confidence": 0.56,
+      "direction": "out"
+    },
+    {
+      "frame": 639,
+      "timestamp": 21.3,
+      "track_id": 1386,
+      "class": "motorcycle",
+      "confidence": 0.4288,
+      "direction": "out"
+    },
+    {
+      "frame": 660,
+      "timestamp": 22.0,
+      "track_id": 1395,
+      "class": "motorcycle",
+      "confidence": 0.6002,
+      "direction": "out"
+    }
+  ]
+}
