@@ -18,9 +18,19 @@ from app.config import (
     MODEL_NAME,
     CONF_THRESHOLD,
     IOU_THRESHOLD,
+    COUNT_CONF_MIN,
     CLASS_IDS,
     VEHICLE_CLASSES,
     MODELS_DIR,
+    LINE_START,
+    LINE_END,
+    LINE_AUTO_Y_RATIO,
+    TRACK_LOST_BUFFER,
+    TRACK_ACTIVATION_THRESHOLD,
+    TRACK_MINIMUM_MATCHING,
+    TRACK_MINIMUM_CONSECUTIVE,
+    OUTPUT_VIDEO_CODEC,
+    OUTPUT_VIDEO_QUALITY,
 )
 from processing.utils import (
     validate_video,
@@ -32,8 +42,9 @@ from processing.utils import (
 
 def compute_line_position(width: int, height: int) -> Tuple[sv.Point, sv.Point]:
     """
-    Tự động tính tọa độ vạch kẻ dựa trên resolution video.
-    Vạch kẻ nằm ngang ở 55% chiều cao (hơi thấp hơn giữa) để đếm tốt hơn.
+    Tính tọa độ vạch kẻ dựa trên resolution video.
+    Nếu cấu hình LINE_START/LINE_END hợp lệ với khung hình hiện tại thì dùng giá trị đó.
+    Ngược lại, vị trí mặc định sẽ được đặt tại một tỉ lệ chiều cao video để phù hợp hơn với làn đường.
 
     Args:
         width: Chiều rộng video
@@ -42,7 +53,11 @@ def compute_line_position(width: int, height: int) -> Tuple[sv.Point, sv.Point]:
     Returns:
         Tuple[sv.Point, sv.Point]: Điểm đầu và cuối của vạch
     """
-    y = int(height * 0.55)   # 55% từ trên xuống
+    if 0 <= LINE_START[0] <= width and 0 <= LINE_START[1] <= height \
+       and 0 <= LINE_END[0] <= width and 0 <= LINE_END[1] <= height:
+        return sv.Point(x=LINE_START[0], y=LINE_START[1]), sv.Point(x=LINE_END[0], y=LINE_END[1])
+
+    y = int(height * LINE_AUTO_Y_RATIO)
     return sv.Point(x=0, y=y), sv.Point(x=width, y=y)
 
 
@@ -57,11 +72,10 @@ class VehicleDetector:
     """
 
     def __init__(self):
-        """Initialize YOLO model and ByteTrack tracker"""
+        """Initialize YOLO model. Tracker được khởi tạo sau khi biết fps thực của video."""
         self.model = None
         self.tracker = None
         self._init_model()
-        self._init_tracker()
 
     # ──────────────────────────────────────────
     # Initialization helpers
@@ -78,14 +92,20 @@ class VehicleDetector:
             self.model = YOLO(str(model_path))
         print("✅ Model loaded successfully!")
 
-    def _init_tracker(self):
-        """Initialize ByteTrack tracker with tuned parameters for stable tracking."""
+    def _init_tracker(self, fps: float):
+        """
+        Khởi tạo ByteTrack với fps thực của video.
+        Quan trọng: frame_rate phải đúng để lost_track_buffer tính thời gian chính xác.
+        """
         self.tracker = sv.ByteTrack(
-            lost_track_buffer=50,             # giữ track khi bị mất detection 50 frames
-            track_activation_threshold=0.25,  # ngưỡng kích hoạt track
-            minimum_matching_threshold=0.7,   # stricter matching = ít đổi ID hơn
-            frame_rate=30,
+            lost_track_buffer=TRACK_LOST_BUFFER,
+            track_activation_threshold=TRACK_ACTIVATION_THRESHOLD,
+            minimum_matching_threshold=TRACK_MINIMUM_MATCHING,
+            minimum_consecutive_frames=TRACK_MINIMUM_CONSECUTIVE,
+            frame_rate=int(round(fps)),  # dùng fps thực, không hardcode 30
         )
+        print(f"🎯 ByteTrack initialized @ {fps:.1f}fps | buffer={TRACK_LOST_BUFFER}f "
+              f"({TRACK_LOST_BUFFER/fps:.1f}s) | activation={TRACK_ACTIVATION_THRESHOLD}")
 
     # ──────────────────────────────────────────
     # Detection & Tracking
@@ -166,30 +186,50 @@ class VehicleDetector:
         print(f"\n📹 Video: {video_info['resolution']} @ {fps:.1f}fps, {video_info['duration']:.1f}s ({total_frames} frames)")
 
         # ── 3. Initialize video writer ──
-        writer = create_video_writer(output_path, fps, width, height)
+        writer = create_video_writer(
+            output_path,
+            fps,
+            width,
+            height,
+            codec=OUTPUT_VIDEO_CODEC,
+            quality=OUTPUT_VIDEO_QUALITY,
+        )
 
-        # ── 4. Setup LineZone (vạch kẻ) ──
+        # ── 4. Khởi tạo tracker với fps thực (quan trọng!) ──
+        self._init_tracker(fps)
+
+        # ── 5. Setup LineZone (vạch kẻ) ──
         line_start, line_end = compute_line_position(width, height)
-        line_zone = sv.LineZone(start=line_start, end=line_end)
+        # Dùng BOTTOM_CENTER: điểm chân xe ổn định hơn tâm bbox khi bị che khuất
+        line_zone = sv.LineZone(
+            start=line_start,
+            end=line_end,
+            triggering_anchors=[sv.Position.BOTTOM_CENTER],
+        )
         line_annotator = sv.LineZoneAnnotator(
             thickness=3,
-            color=sv.Color.from_hex("#FFFF00"),  # vạch màu vàng
+            color=sv.Color.from_hex("#FFFF00"),
             text_thickness=2,
             text_scale=1.0,
         )
-        print(f"📏 LineZone: ({line_start.x},{line_start.y}) → ({line_end.x},{line_end.y})")
+        print(f"📏 LineZone: ({line_start.x},{line_start.y}) → ({line_end.x},{line_end.y}) | anchor=BOTTOM_CENTER")
 
-        # ── 5. Setup annotators ──
+        # ── 6. Setup annotators ──
         box_annotator = sv.BoundingBoxAnnotator(thickness=2)
-        label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1)
+        label_annotator = sv.LabelAnnotator(
+            text_scale=0.28,       # nhỏ hơn để không che xe phía sau
+            text_thickness=1,
+            text_padding=2,
+        )
         trace_annotator = sv.TraceAnnotator(
             trace_length=40,
             thickness=2,
             color_lookup=sv.ColorLookup.TRACK,
         )
 
-        # ── 6. Counting state ──
+        # ── 7. Counting state ──
         counted_ids: set = set()          # track_id đã được đếm (không đếm trùng)
+        seen_track_ids: set = set()      # tất cả track_id đã xuất hiện
         all_events: List[dict] = []       # danh sách sự kiện crossing
         timeline_dict: Dict[int, dict] = {}  # second -> {car, motorcycle, bus, truck}
 
@@ -200,6 +240,12 @@ class VehicleDetector:
                 # ── A. Detect & Track ──
                 detections = self.detect_frame(frame)
                 tracked = self.update_tracker(detections)
+
+                for i in range(len(tracked)):
+                    if tracked.tracker_id is None:
+                        continue
+                    track_id = int(tracked.tracker_id[i])
+                    seen_track_ids.add(track_id)
 
                 # ── B. LineZone trigger (kiểm tra xe cắt vạch) ──
                 # supervision 0.21: trigger() trả về tuple (crossed_in_mask, crossed_out_mask)
@@ -224,6 +270,9 @@ class VehicleDetector:
                     is_crossed_out = bool(crossed_out_mask[i]) if i < len(crossed_out_mask) else False
 
                     if (is_crossed_in or is_crossed_out) and (track_id not in counted_ids):
+                        # Lọc confidence thấp: tránh false positive khi đếm
+                        if confidence < COUNT_CONF_MIN:
+                            continue
                         # Chỉ đếm lần đầu tiên
                         counted_ids.add(track_id)
                         direction = "in" if is_crossed_in else "out"
@@ -259,15 +308,14 @@ class VehicleDetector:
                 # 2) Bounding boxes
                 annotated = box_annotator.annotate(scene=annotated, detections=tracked)
 
-                # 3) Labels: #ID class conf
+                # 3) Labels: show compact ID + class only to avoid occluding vehicles
                 labels = []
                 for i in range(len(tracked)):
                     tid = int(tracked.tracker_id[i]) if tracked.tracker_id is not None else -1
                     cid = int(tracked.class_id[i])
                     cname = VEHICLE_CLASSES.get(cid, "?")
-                    conf = tracked.confidence[i] if tracked.confidence is not None else 0.0
-                    is_counted = "✓" if tid in counted_ids else ""
-                    labels.append(f"#{tid} {cname} {conf:.2f} {is_counted}")
+                    is_counted = " ✓" if tid in counted_ids else ""
+                    labels.append(f"#{tid} {cname}{is_counted}")
 
                 if labels:
                     annotated = label_annotator.annotate(
@@ -294,7 +342,8 @@ class VehicleDetector:
 
         finally:
             writer.release()
-            print(f"\n✅ Video processing complete! Total crossed: {len(counted_ids)}")
+            print(f"\n✅ Video processing complete! Total crossed: {len(all_events)} events, {len(counted_ids)} unique vehicles")
+            print(f"   Observed track IDs: {len(seen_track_ids)}")
 
         # ── 7. Build results JSON ──
         # Timeline: điền các giây còn thiếu với giá trị 0

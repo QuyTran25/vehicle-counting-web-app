@@ -122,7 +122,7 @@ def video_frame_generator(video_path: str):
 
 
 def create_video_writer(output_path: str, fps: float, width: int, height: int, 
-                       codec: str = "mp4v") -> cv2.VideoWriter:
+                       codec: str = "mp4v", quality: int = None) -> cv2.VideoWriter:
     """
     Create OpenCV VideoWriter for output.
     
@@ -131,16 +131,29 @@ def create_video_writer(output_path: str, fps: float, width: int, height: int,
         fps: Frames per second
         width: Frame width
         height: Frame height
-        codec: Video codec (e.g., 'mp4v', 'MJPG', 'XVID')
+        codec: Video codec (e.g., 'avc1', 'mp4v', 'MJPG', 'XVID')
+        quality: Optional quality hint for the writer.
         
     Returns:
         cv2.VideoWriter: Video writer object
     """
     fourcc = cv2.VideoWriter_fourcc(*codec)
     writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-    
+
     if not writer.isOpened():
-        raise RuntimeError(f"Failed to create VideoWriter with codec '{codec}'")
+        # Fall back to mp4v if the requested codec is not available.
+        fallback_codec = "mp4v"
+        fallback_fourcc = cv2.VideoWriter_fourcc(*fallback_codec)
+        writer = cv2.VideoWriter(output_path, fallback_fourcc, fps, (width, height))
+
+    if quality is not None and writer.isOpened():
+        try:
+            writer.set(cv2.VIDEOWRITER_PROP_QUALITY, float(quality))
+        except Exception:
+            pass
+
+    if not writer.isOpened():
+        raise RuntimeError(f"Failed to create VideoWriter with codec '{codec}' or fallback '{fallback_codec}'")
     
     return writer
 
