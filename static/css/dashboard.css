@@ -1,0 +1,76 @@
+
+.hero-row { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+
+.upload-card { padding: 16px 17px; display: flex; flex-direction: column; gap: 12px; }
+.upload-card-header { display: flex; align-items: center; justify-content: space-between; }
+.upload-card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 22px; font-weight: 600;
+}
+.badge-processing {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 12px;
+  background: var(--orange-bg); border: 1px solid var(--orange-border);
+  font-weight: 700; font-size: 10px;
+  letter-spacing: .5px; text-transform: uppercase; color: var(--orange-border);
+}
+.badge-dot { width: 8px; height: 8px; background: var(--orange-border); border-radius: 50%; }
+
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: 4px;
+  min-height: 280px; flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; cursor: pointer; transition: border-color .2s, background .2s;
+  background: rgba(248,249,255,.6); position: relative; overflow: hidden;
+}
+.drop-zone:hover { border-color: var(--blue-primary); background: rgba(211,228,254,.25); }
+.drop-icon { font-size: 40px; margin-bottom: 8px; }
+.drop-label { font-size: 16px; font-weight: 500; color: var(--text-dark); }
+.drop-hint { font-size: 15px; color: var(--text-mid); margin-top: 4px; }
+#fileInput { display: none; }
+
+.progress-section { display: flex; flex-direction: column; gap: 6px; }
+.progress-meta { display: flex; justify-content: space-between; align-items: center; }
+.progress-label { font-size: 13px; color: var(--text-mid); }
+.progress-time { font-size: 13px; font-weight: 700; color: var(--blue-primary); }
+.progress-track { width: 100%; height: 8px; background: var(--blue-light); border-radius: 12px; }
+.progress-fill { height: 100%; background: var(--blue-active); border-radius: 12px; }
+
+.stats-panel { padding: 24px; display: flex; flex-direction: column; gap: 0; }
+.stats-heading {
+  font-size: 11px; font-weight: 500; letter-spacing: 1.2px; color: var(--text-mid); padding-bottom: 16px;
+}
+.stats-total-label { font-size: 13px; color: var(--text-mid); margin-bottom: 4px; }
+.stats-total-value {
+  font-size: 48px; font-weight: 700; letter-spacing: -0.96px; color: var(--text-dark); margin-bottom: 12px;
+}
+.inout-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.inout-card { background: var(--blue-bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+.inout-label { font-size: 10px; font-weight: 500; color: var(--text-mid); margin-bottom: 4px; }
+.inout-val-in  { font-size: 24px; font-weight: 700; color: var(--blue-primary); }
+.inout-val-out { font-size: 24px; font-weight: 700; color: var(--orange); }
+
+.separator { border: none; border-top: 1px solid rgba(195,197,217,.3); margin: 12px 0; }
+
+.vehicle-list { display: flex; flex-direction: column; gap: 12px; }
+.vehicle-row { display: flex; align-items: center; justify-content: space-between; }
+.vehicle-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.vehicle-counts { display: flex; align-items: center; gap: 10px; }
+.vehicle-dir { display: flex; flex-direction: column; align-items: flex-end; }
+.dir-lbl { font-size: 9px; font-weight: 700; color: var(--text-mid); }
+.dir-val-in  { font-size: 14px; font-weight: 700; color: var(--blue-primary); }
+.dir-val-out { font-size: 14px; font-weight: 700; color: var(--orange); }
+.vdivider { width: 1px; height: 28px; background: rgba(195,197,217,.4); }
+
+.chart-card { padding: 24px; }
+.chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.chart-title { font-size: 22px; font-weight: 600; }
+.chart-subtitle { font-size: 14px; color: var(--text-mid); margin-top: 2px; }
+.chart-legend { display: flex; gap: 16px; align-items: center; margin-top: 4px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-mid); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.chart-wrap { position: relative; height: 220px; }
+
+@media (max-width: 1024px) {
+  .hero-row { grid-template-columns: 1fr; }
+}

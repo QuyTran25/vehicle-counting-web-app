@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrafficMonitor — Vehicle Counting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/common.css" />
+  <link rel="stylesheet" href="/static/css/history.css" />
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <div class="sidebar-logo" style="padding:0; border:none;">
+      TrafficMonitor
+    </div>
+    <button id="mobileMenuBtn" style="background:none;border:none;font-size:24px;cursor:pointer;">☰</button>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        TrafficMonitor
+        <span>AI Vehicle Counting System</span>
+      </div>
+      <nav>
+        <a class="nav-link " href="/">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-link active" href="/history">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 9H9V5h2v6zm0 2H9v2h2v-2z"/></svg>
+          History
+        </a>
+      </nav>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn-upload-video" onclick="window.location.href='/'">
+        📤 Upload Video
+      </button>
+      <a class="support-link" href="#">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4zm0 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-1 5h2v4H9v-4z"/></svg>
+        Support
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <header class="topnav">
+      <span class="topnav-title">History</span>
+      <div class="topnav-right">
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="#434656" stroke-width="2"><circle cx="8" cy="8" r="6"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+          <input type="text" id="searchInput" placeholder="Tìm kiếm dữ liệu..." />
+        </div>
+        <div class="topnav-icons">
+          <button>🔔</button>
+          <button>⚙️</button>
+          <button>❓</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      
+      <div class="card filter-card">
+        <div>
+          <div class="filter-label">KHOẢNG THỜI GIAN</div>
+          <div class="filter-date-row">
+            <input type="date" class="date-input" id="dateFrom" value="2023-10-24" />
+            <span class="date-sep">→</span>
+            <input type="date" class="date-input" id="dateTo" value="2023-10-25" />
+          </div>
+        </div>
+        <button class="btn-filter">
+          ☰ Áp dụng bộ lọc
+        </button>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-toolbar">
+          <span class="table-toolbar-title">Danh sách Video đã xử lý</span>
+          <button class="btn-excel">📄 Xuất Excel</button>
+        </div>
+        <div class="table-responsive">
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>Video</th>
+                <th>Thời lượng</th>
+                <th>Tổng số xe</th>
+                <th>Chi tiết</th>
+                <th>Độ tin cậy</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr>
+                <td><div class="td-video">
+                  <div class="vid-thumb">📹</div>
+                  <div><div class="vid-name">CCTV_Intersection_01</div><div class="vid-date">24/10/2023 - 14:22:45</div></div>
+                </div></td>
+                <td>15:30</td>
+                <td class="td-total">1,242</td>
+                <td>
+                  <div class="detail-chips">
+                    <span class="chip">🛵 450</span><span class="chip">🚗 680</span>
+                    <span class="chip">🚌 12</span><span class="chip">🚚 100</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="conf-wrap">
+                    <span class="conf-pct">96.5%</span>
+                    <div class="conf-bar"><div class="conf-fill" style="width:96.5%"></div></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-btns">
+                    <button title="Xem kết quả">👁</button>
+                    <button title="Tải video">⬇</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="td-video">
+                  <div class="vid-thumb">📹</div>
+                  <div><div class="vid-name">Toll_Gate_Night_Stre</div><div class="vid-date">24/10/2023 - 22:15:00</div></div>
+                </div></td>
+                <td>45:00</td>
+                <td class="td-total">3,890</td>
+                <td>
+                  <div class="detail-chips">
+                    <span class="chip">🛵 2.1k</span><span class="chip">🚗 1.5k</span>
+                    <span class="chip">🚚 290</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="conf-wrap">
+                    <span class="conf-pct">88.2%</span>
+                    <div class="conf-bar"><div class="conf-fill" style="width:88.2%"></div></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-btns">
+                    <button title="Xem kết quả">👁</button>
+                    <button title="Tải video">⬇</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="td-video">
+                  <div class="vid-thumb">📹</div>
+                  <div><div class="vid-name">Highway_67_RushHour.</div><div class="vid-date">24/10/2023 - 07:30:12</div></div>
+                </div></td>
+                <td>60:00</td>
+                <td class="td-total">5,120</td>
+                <td>
+                  <div class="detail-chips">
+                    <span class="chip">🛵 3.2k</span><span class="chip">🚗 1.8k</span>
+                    <span class="chip">🚚 120</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="conf-wrap">
+                    <span class="conf-pct">94.1%</span>
+                    <div class="conf-bar"><div class="conf-fill" style="width:94.1%"></div></div>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-btns">
+                    <button title="Xem kết quả">👁</button>
+                    <button title="Tải video">⬇</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-row">
+          <span id="paginationInfo">Hiển thị 1 - 25 của 1,420 video</span>
+          <div class="pag-buttons" id="paginationBtns">
+             <button class="pag-btn">|&lt;</button>
+             <button class="pag-btn">&lt;</button>
+             <button class="pag-btn active">1</button>
+             <button class="pag-btn">2</button>
+             <button class="pag-btn">3</button>
+             <button class="pag-btn">...</button>
+             <button class="pag-btn">57</button>
+             <button class="pag-btn">&gt;</button>
+             <button class="pag-btn">&gt;|</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast"></div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/history.js"></script>
+</body>
+</html>

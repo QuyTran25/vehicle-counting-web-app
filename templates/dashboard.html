@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrafficMonitor — Vehicle Counting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/common.css" />
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <div class="sidebar-logo" style="padding:0; border:none;">
+      TrafficMonitor
+    </div>
+    <button id="mobileMenuBtn" style="background:none;border:none;font-size:24px;cursor:pointer;">☰</button>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        TrafficMonitor
+        <span>AI Vehicle Counting System</span>
+      </div>
+      <nav>
+        <a class="nav-link active" href="/">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-link " href="/history">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 9H9V5h2v6zm0 2H9v2h2v-2z"/></svg>
+          History
+        </a>
+      </nav>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn-upload-video" onclick="window.location.href='/'">
+        📤 Upload Video
+      </button>
+      <a class="support-link" href="#">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4zm0 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-1 5h2v4H9v-4z"/></svg>
+        Support
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <header class="topnav">
+      <span class="topnav-title">Dashboard</span>
+      <div class="topnav-right">
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="#434656" stroke-width="2"><circle cx="8" cy="8" r="6"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+          <input type="text" id="searchInput" placeholder="Tìm kiếm dữ liệu..." />
+        </div>
+        <div class="topnav-icons">
+          <button>🔔</button>
+          <button>⚙️</button>
+          <button>❓</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      
+      <div class="hero-row">
+        <div class="card upload-card">
+          <div class="upload-card-header">
+            <div class="upload-card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0041C8" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Tải lên &amp; Xử lý Video
+            </div>
+            <div class="badge-processing hidden" id="processingBadge">
+              <div class="badge-dot"></div> ĐANG XỬ LÝ
+            </div>
+          </div>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-content" id="dropContent">
+              <div class="drop-icon">☁️</div>
+              <div class="drop-label">Kéo thả file vào đây</div>
+              <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
+            </div>
+          </div>
+          <input type="file" id="fileInput" accept="video/*" />
+          <div class="progress-section">
+            <div class="progress-meta">
+              <span class="progress-label" id="progressLabel">Tiến độ phân tích: 68%</span>
+              <span class="progress-time" id="progressTime">12:45 / 18:30</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill" style="width: 68%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card stats-panel">
+          <div class="stats-heading">THỐNG KÊ TỔNG QUAN</div>
+          <div class="stats-total-label">Tổng số phương tiện</div>
+          <div class="stats-total-value" id="statTotal">1,284</div>
+          <div class="inout-row">
+            <div class="inout-card">
+              <div class="inout-label">TỔNG VÀO</div>
+              <div class="inout-val-in" id="statIn">742</div>
+            </div>
+            <div class="inout-card">
+              <div class="inout-label">TỔNG RA</div>
+              <div class="inout-val-out" id="statOut">542</div>
+            </div>
+          </div>
+          <hr class="separator" />
+          <div class="vehicle-list" id="vehicleList">
+            <div class="vehicle-row">
+              <div class="vehicle-name"><span class="vehicle-icon">🛵</span>Xe máy</div>
+              <div class="vehicle-counts">
+                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">450</span></div>
+                <div class="vdivider"></div>
+                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">392</span></div>
+              </div>
+            </div>
+            <div class="vehicle-row">
+              <div class="vehicle-name"><span class="vehicle-icon">🚗</span>Ô tô</div>
+              <div class="vehicle-counts">
+                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">210</span></div>
+                <div class="vdivider"></div>
+                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">111</span></div>
+              </div>
+            </div>
+            <div class="vehicle-row">
+              <div class="vehicle-name"><span class="vehicle-icon">🚌</span>Xe buýt</div>
+              <div class="vehicle-counts">
+                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">25</span></div>
+                <div class="vdivider"></div>
+                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">20</span></div>
+              </div>
+            </div>
+            <div class="vehicle-row">
+              <div class="vehicle-name"><span class="vehicle-icon">🚚</span>Xe tải</div>
+              <div class="vehicle-counts">
+                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">57</span></div>
+                <div class="vdivider"></div>
+                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">19</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div class="chart-title-group">
+            <div class="chart-title">Lưu lượng theo thời gian</div>
+            <div class="chart-subtitle">Biểu đồ tổng hợp các phương tiện di chuyển trong khu vực</div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#0041C8"></div>Số xe vào</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#924C00"></div>Số xe ra</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="trafficChart"></canvas>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast"></div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
