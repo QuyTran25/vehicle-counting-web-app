@@ -168,10 +168,16 @@ def get_result(task_id: str) -> dict | None:
 
 
 def list_tasks(limit: int = 20, offset: int = 0) -> list[dict]:
-    """Lấy danh sách task với phân trang."""
+    """Lấy danh sách task với phân trang và kết quả (nếu có)."""
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        """SELECT t.id, t.filename, t.status, t.progress, t.error_msg, t.created_at, t.updated_at,
+                  r.video_duration, r.fps, r.total_frames, r.resolution,
+                  r.car_count, r.motorcycle_count, r.bus_count, r.truck_count,
+                  r.output_video, r.output_json
+           FROM tasks t
+           LEFT JOIN results r ON t.id = r.task_id
+           ORDER BY t.created_at DESC LIMIT ? OFFSET ?""",
         (limit, offset),
     ).fetchall()
     conn.close()

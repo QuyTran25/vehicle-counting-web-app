@@ -1,20 +1,21 @@
 # Database
-# database.db
-# *.db
+database.db
+*.db
 
 # YOLO Model
-# models/yolov8n.pt
-# models/*.pt
+models/yolov8n.pt
+models/*.pt
 
 # Uploaded videos
-# uploads/*
-# !uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 
 # Output files
-# outputs/*
-# !outputs/.gitkeep
+outputs/*
+!outputs/.gitkeep
 
 # Python environment
+.venv/
 venv/
 env/
 __pycache__/
@@ -35,11 +36,3 @@ build/
 .DS_Store
 Thumbs.db
 *.log
-
-# Temporary files
-*.tmp
-.cache/
-
-# Test outputs
-.pytest_cache/
-htmlcov/

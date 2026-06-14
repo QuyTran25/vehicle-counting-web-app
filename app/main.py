@@ -64,23 +64,39 @@ except:
 
 @app.get("/")
 async def root():
-    """Serve main application page"""
+    """Serve dashboard page"""
     try:
-        template_path = Path(__file__).parent.parent / "templates" / "index.html"
+        template_path = Path(__file__).parent.parent / "templates" / "dashboard.html"
         with open(template_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         return HTMLResponse(content=html_content)
     except Exception as e:
         return {
-            "message": "Vehicle Detection API",
+            "message": "Vehicle Detection API - Dashboard",
             "version": "1.0.0",
-            "error": f"Could not load template: {str(e)}",
+            "error": f"Could not load dashboard template: {str(e)}",
             "endpoints": {
                 "upload": "POST /upload",
                 "status": "GET /status/{task_id}",
                 "result": "GET /result/{task_id}",
                 "tasks": "GET /tasks",
             }
+        }
+
+
+@app.get("/history")
+async def history():
+    """Serve history page"""
+    try:
+        template_path = Path(__file__).parent.parent / "templates" / "history.html"
+        with open(template_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        return {
+            "message": "Vehicle Detection API - History",
+            "version": "1.0.0",
+            "error": f"Could not load history template: {str(e)}"
         }
 
 
@@ -131,12 +147,9 @@ async def upload_video(file: UploadFile = File(...)):
         # Create task in database
         db.create_task(task_id, file.filename)
         
-        # Start processing in background
-        threading.Thread(
-            target=process_video_task,
-            args=(task_id, str(file_path)),
-            daemon=True,
-        ).start()
+        # Start processing in background via subprocess
+        from app.process_runner import run_process_in_background
+        run_process_in_background(task_id, str(file_path))
         
         return {
             "task_id": task_id,
@@ -213,6 +226,22 @@ async def get_result(task_id: str):
         with open(json_path, "r", encoding="utf-8") as f:
             results = json.load(f)
         
+        # Translate 'motorcycle' to 'motorbike' to match JSON schema contract
+        if "summary" in results:
+            summary = results["summary"]
+            if "motorcycle" in summary:
+                summary["motorbike"] = summary.pop("motorcycle")
+        
+        if "timeline" in results and isinstance(results["timeline"], list):
+            for item in results["timeline"]:
+                if "motorcycle" in item:
+                    item["motorbike"] = item.pop("motorcycle")
+                    
+        if "events" in results and isinstance(results["events"], list):
+            for evt in results["events"]:
+                if evt.get("class") == "motorcycle":
+                    evt["class"] = "motorbike"
+
         # Add file paths
         results["output_video"] = f"/output/{task_id}_output.mp4"
         results["output_json"] = f"/output/{task_id}_result.json"

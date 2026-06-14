@@ -48,6 +48,7 @@ def _process_video_subprocess(task_id: str, video_path: str):
         
         cmd = [
             python_exe,
+            "-u",
             str(script_path),
             str(video_path),
             str(output_video),
@@ -62,6 +63,7 @@ def _process_video_subprocess(task_id: str, video_path: str):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
             bufsize=1,
             cwd=str(PROJECT_ROOT)
         )
@@ -69,9 +71,17 @@ def _process_video_subprocess(task_id: str, video_path: str):
         # Đọc output theo thời gian thực
         if process.stdout:
             for line in process.stdout:
-                # In ra log console của server
-                sys.stdout.write(f"[{task_id}] {line}")
-                sys.stdout.flush()
+                # In ra log console của server (an toàn với mã hóa Windows console)
+                try:
+                    sys.stdout.write(f"[{task_id}] {line}")
+                    sys.stdout.flush()
+                except Exception:
+                    try:
+                        safe_line = line.encode(sys.stdout.encoding or 'utf-8', errors='replace').decode(sys.stdout.encoding or 'utf-8')
+                        sys.stdout.write(f"[{task_id}] {safe_line}")
+                        sys.stdout.flush()
+                    except Exception:
+                        pass
                 
                 # Tìm kiếm tiến trình (%)
                 match = PROGRESS_PATTERN.search(line)
