@@ -40,25 +40,80 @@ from processing.utils import (
 )
 
 
-def compute_line_position(width: int, height: int) -> Tuple[sv.Point, sv.Point]:
+def compute_split_lines(width: int, height: int) -> Tuple[Tuple[sv.Point, sv.Point], Tuple[sv.Point, sv.Point]]:
     """
-    Tính tọa độ vạch kẻ dựa trên resolution video.
-    Nếu cấu hình LINE_START/LINE_END hợp lệ với khung hình hiện tại thì dùng giá trị đó.
-    Ngược lại, vị trí mặc định sẽ được đặt tại một tỉ lệ chiều cao video để phù hợp hơn với làn đường.
-
-    Args:
-        width: Chiều rộng video
-        height: Chiều cao video
-
-    Returns:
-        Tuple[sv.Point, sv.Point]: Điểm đầu và cuối của vạch
+    Tính tọa độ cho 2 vạch kẻ:
+    - line_out (bên trái, hướng đi xuống): Y ở vị trí 72% chiều cao (thấp).
+    - line_in (bên phải, hướng đi lên): Y ở vị trí 35% chiều cao (cao).
+    Cho phép gối đầu (overlap) ở giữa để tránh sót xe đi sát dải phân cách do góc nhìn phối cảnh.
     """
-    if 0 <= LINE_START[0] <= width and 0 <= LINE_START[1] <= height \
-       and 0 <= LINE_END[0] <= width and 0 <= LINE_END[1] <= height:
-        return sv.Point(x=LINE_START[0], y=LINE_START[1]), sv.Point(x=LINE_END[0], y=LINE_END[1])
+    divider_x_out = int(width * 0.48)
+    divider_x_in = int(width * 0.46) # dải phân cách chéo về trái khi ở trên cao
+    
+    y_out = int(height * 0.72)
+    y_in = int(height * 0.35)
+    
+    # Left line (OUT): kéo dài qua dải phân cách một chút (+15px)
+    line_out_start = sv.Point(x=0, y=y_out)
+    line_out_end = sv.Point(x=divider_x_out + 15, y=y_out)
+    
+    # Right line (IN): kéo dài sang trái qua dải phân cách một chút (-25px)
+    line_in_start = sv.Point(x=divider_x_in - 25, y=y_in)
+    line_in_end = sv.Point(x=width, y=y_in)
+    
+    return (line_out_start, line_out_end), (line_in_start, line_in_end)
 
-    y = int(height * LINE_AUTO_Y_RATIO)
-    return sv.Point(x=0, y=y), sv.Point(x=width, y=y)
+
+def draw_custom_line_zone(frame, start, end, label, count, color=(0, 255, 255), is_in_line=False):
+    """
+    Vẽ vạch kẻ và nhãn chỉ số IN hoặc OUT riêng biệt cho từng lane.
+    """
+    # Vẽ đường line chính
+    cv2.line(frame, (start.x, start.y), (end.x, end.y), color, 3, cv2.LINE_AA)
+    
+    # Vẽ các đầu tròn cho vạch
+    cv2.circle(frame, (start.x, start.y), 6, (0, 0, 0), -1, cv2.LINE_AA)
+    cv2.circle(frame, (start.x, start.y), 4, color, -1, cv2.LINE_AA)
+    cv2.circle(frame, (end.x, end.y), 6, (0, 0, 0), -1, cv2.LINE_AA)
+    cv2.circle(frame, (end.x, end.y), 4, color, -1, cv2.LINE_AA)
+    
+    # Chuẩn bị chữ hiển thị
+    text = f"{label}: {count}"
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.75
+    text_thickness = 2
+    
+    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, text_thickness)
+    
+    # Tính tọa độ trung tâm của vạch
+    center_x = (start.x + end.x) // 2
+    center_y = (start.y + end.y) // 2
+    
+    if is_in_line:
+        # Đẩy chữ lên phía trên nếu là line IN
+        box_y1 = center_y - text_height - 12
+        box_y2 = center_y - 2
+    else:
+        # Đẩy chữ xuống phía dưới nếu là line OUT
+        box_y1 = center_y + 2
+        box_y2 = center_y + text_height + 12
+        
+    box_x1 = center_x - text_width // 2 - 8
+    box_x2 = center_x + text_width // 2 + 8
+    
+    # Vẽ hình nền nhãn
+    cv2.rectangle(frame, (box_x1, box_y1), (box_x2, box_y2), color, -1)
+    # Vẽ chữ màu đen
+    cv2.putText(
+        frame, 
+        text, 
+        (box_x1 + 8, box_y2 - 5), 
+        font, 
+        font_scale, 
+        (0, 0, 0), 
+        text_thickness, 
+        cv2.LINE_AA
+    )
 
 
 class VehicleDetector:
@@ -198,21 +253,30 @@ class VehicleDetector:
         # ── 4. Khởi tạo tracker với fps thực (quan trọng!) ──
         self._init_tracker(fps)
 
-        # ── 5. Setup LineZone (vạch kẻ) ──
-        line_start, line_end = compute_line_position(width, height)
-        # Dùng BOTTOM_CENTER: điểm chân xe ổn định hơn tâm bbox khi bị che khuất
-        line_zone = sv.LineZone(
-            start=line_start,
-            end=line_end,
-            triggering_anchors=[sv.Position.BOTTOM_CENTER],
+        # ── 5. Setup LineZones (vạch kẻ chia đôi làn) ──
+        (line_out_start, line_out_end), (line_in_start, line_in_end) = compute_split_lines(width, height)
+        
+        # Line zone cho xe đi xuống (bên trái)
+        line_zone_out = sv.LineZone(
+            start=line_out_start,
+            end=line_out_end,
+            triggering_anchors=[sv.Position.BOTTOM_CENTER, sv.Position.CENTER],
         )
+        # Line zone cho xe đi lên (bên phải)
+        line_zone_in = sv.LineZone(
+            start=line_in_start,
+            end=line_in_end,
+            triggering_anchors=[sv.Position.BOTTOM_CENTER, sv.Position.CENTER],
+        )
+        
         line_annotator = sv.LineZoneAnnotator(
             thickness=3,
             color=sv.Color.from_hex("#FFFF00"),
             text_thickness=2,
             text_scale=1.0,
         )
-        print(f"📏 LineZone: ({line_start.x},{line_start.y}) → ({line_end.x},{line_end.y}) | anchor=BOTTOM_CENTER")
+        print(f"[LineZone] Out (left): ({line_out_start.x},{line_out_start.y}) -> ({line_out_end.x},{line_out_end.y})")
+        print(f"[LineZone] In (right): ({line_in_start.x},{line_in_start.y}) -> ({line_in_end.x},{line_in_end.y})")
 
         # ── 6. Setup annotators ──
         box_annotator = sv.BoundingBoxAnnotator(thickness=2)
@@ -247,11 +311,9 @@ class VehicleDetector:
                     track_id = int(tracked.tracker_id[i])
                     seen_track_ids.add(track_id)
 
-                # ── B. LineZone trigger (kiểm tra xe cắt vạch) ──
-                # supervision 0.21: trigger() trả về tuple (crossed_in_mask, crossed_out_mask)
-                # crossed_in_mask[i] = True nếu detection i đi vào (cross line từ dưới lên)
-                # crossed_out_mask[i] = True nếu detection i đi ra (cross line từ trên xuống)
-                crossed_in_mask, crossed_out_mask = line_zone.trigger(detections=tracked)
+                # ── B. LineZone trigger (kiểm tra xe cắt vạch ở cả 2 LineZone) ──
+                crossed_in_mask_out, crossed_out_mask_out = line_zone_out.trigger(detections=tracked)
+                crossed_in_mask_in, crossed_out_mask_in = line_zone_in.trigger(detections=tracked)
 
                 # ── C. Ghi sự kiện crossing ──
                 timestamp = frame_number / fps
@@ -265,17 +327,29 @@ class VehicleDetector:
                     class_name = VEHICLE_CLASSES.get(class_id, "unknown")
                     confidence = float(tracked.confidence[i]) if tracked.confidence is not None else 0.0
 
-                    # Kiểm tra: xe có cắt vạch không? (in HOẶC out)
-                    is_crossed_in = bool(crossed_in_mask[i]) if i < len(crossed_in_mask) else False
-                    is_crossed_out = bool(crossed_out_mask[i]) if i < len(crossed_out_mask) else False
+                    # Kiểm tra: xe có cắt vạch không? (in HOẶC out trên cả 2 LineZone)
+                    is_in_crossed_in = bool(crossed_in_mask_in[i]) if i < len(crossed_in_mask_in) else False
+                    is_in_crossed_out = bool(crossed_out_mask_in[i]) if i < len(crossed_out_mask_in) else False
+                    
+                    is_out_crossed_in = bool(crossed_in_mask_out[i]) if i < len(crossed_in_mask_out) else False
+                    is_out_crossed_out = bool(crossed_out_mask_out[i]) if i < len(crossed_out_mask_out) else False
 
-                    if (is_crossed_in or is_crossed_out) and (track_id not in counted_ids):
+                    is_crossed = False
+                    direction = None
+                    
+                    if is_in_crossed_in or is_in_crossed_out:
+                        is_crossed = True
+                        direction = "in" if is_in_crossed_in else "out"
+                    elif is_out_crossed_in or is_out_crossed_out:
+                        is_crossed = True
+                        direction = "in" if is_out_crossed_in else "out"
+
+                    if is_crossed and (track_id not in counted_ids):
                         # Lọc confidence thấp: tránh false positive khi đếm
                         if confidence < COUNT_CONF_MIN:
                             continue
                         # Chỉ đếm lần đầu tiên
                         counted_ids.add(track_id)
-                        direction = "in" if is_crossed_in else "out"
 
                         # Ghi event
                         all_events.append({
@@ -322,10 +396,26 @@ class VehicleDetector:
                         scene=annotated, detections=tracked, labels=labels
                     )
 
-                # 4) LineZone (vạch kẻ + bộ đếm IN/OUT)
-                # supervision 0.21: dùng frame= thay vì scene=
-                annotated = line_annotator.annotate(
-                    frame=annotated, line_counter=line_zone
+                # 4) LineZones (vạch kẻ + vẽ nhãn IN/OUT riêng biệt cho từng lane)
+                # Left line: chỉ vẽ OUT
+                draw_custom_line_zone(
+                    annotated, 
+                    line_out_start, 
+                    line_out_end, 
+                    label="LINE OUT", 
+                    count=line_zone_out.out_count, 
+                    color=(0, 255, 255), 
+                    is_in_line=False
+                )
+                # Right line: chỉ vẽ IN
+                draw_custom_line_zone(
+                    annotated, 
+                    line_in_start, 
+                    line_in_end, 
+                    label="LINE IN", 
+                    count=line_zone_in.in_count, 
+                    color=(0, 255, 255), 
+                    is_in_line=True
                 )
 
                 # ── E. Ghi frame ra video ──
@@ -365,8 +455,14 @@ class VehicleDetector:
                 "resolution": video_info["resolution"],
                 "processed_frames": frame_number + 1,
                 "line_position": {
-                    "start": [line_start.x, line_start.y],
-                    "end": [line_end.x, line_end.y],
+                    "line_out": {
+                        "start": [line_out_start.x, line_out_start.y],
+                        "end": [line_out_end.x, line_out_end.y],
+                    },
+                    "line_in": {
+                        "start": [line_in_start.x, line_in_start.y],
+                        "end": [line_in_end.x, line_in_end.y],
+                    }
                 },
             },
             "summary": summary,
@@ -377,8 +473,8 @@ class VehicleDetector:
         with open(json_output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
-        print(f"📊 JSON saved to: {json_output_path}")
-        print(f"🎬 Video saved to: {output_path}")
+        print(f"[JSON] Saved to: {json_output_path}")
+        print(f"[Video] Saved to: {output_path}")
         return results
 
     # ──────────────────────────────────────────

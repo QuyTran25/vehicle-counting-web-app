@@ -28,7 +28,7 @@ from app.config import (
     SUPPORTED_VIDEO_FORMATS,
     MAX_VIDEO_SIZE_MB,
 )
-from app.database import Database
+from app.database import Database, get_connection
 from processing.utils import validate_video
 
 
@@ -51,11 +51,28 @@ app.add_middleware(
 # Initialize database
 db = Database()
 
+# Startup Cleanup Event
+@app.on_event("startup")
+async def startup_event():
+    """Reset stuck tasks to failed state on startup"""
+    try:
+        conn = get_connection()
+        conn.execute(
+            """UPDATE tasks
+               SET status = 'failed', error_msg = 'Server restarted or crashed during processing', progress = 0
+               WHERE status IN ('queued', 'processing')"""
+        )
+        conn.commit()
+        conn.close()
+        print("[DB] Reset stuck tasks on startup successfully.")
+    except Exception as e:
+        print(f"[DB] Error resetting stuck tasks on startup: {str(e)}")
+
 # Static files
 try:
     app.mount("/static", StaticFiles(directory=str(Path(__file__).parent.parent / "static")), name="static")
 except:
-    print("⚠️ Static files directory not found, skipping mount")
+    print("[Static] Static files directory not found, skipping mount")
 
 
 # ============================================================================

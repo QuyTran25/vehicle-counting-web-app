@@ -32,7 +32,7 @@ CONF_THRESHOLD = 0.25  # Thấp để bắt xe máy nhỏ/xa; confidence filter 
 IOU_THRESHOLD = 0.45   # IoU threshold for NMS
 
 # Chỉ đếm crossing khi confidence đủ cao (tránh false positive)
-COUNT_CONF_MIN = 0.45
+COUNT_CONF_MIN = 0.25
 
 # Video Processing Configuration
 MAX_VIDEO_SIZE_MB = 500  # Maximum allowed upload size
