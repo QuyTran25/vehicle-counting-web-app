@@ -88,13 +88,13 @@
             </div>
           </div>
           <input type="file" id="fileInput" accept="video/*" />
-          <div class="progress-section">
+          <div class="progress-section" id="progressSection" style="display:none;">
             <div class="progress-meta">
-              <span class="progress-label" id="progressLabel">Tiến độ phân tích: 68%</span>
-              <span class="progress-time" id="progressTime">12:45 / 18:30</span>
+              <span class="progress-label" id="progressLabel">Chờ upload video...</span>
+              <span class="progress-time" id="progressTime"></span>
             </div>
             <div class="progress-track">
-              <div class="progress-fill" id="progressFill" style="width: 68%;"></div>
+              <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
             </div>
           </div>
         </div>
@@ -102,51 +102,20 @@
         <div class="card stats-panel">
           <div class="stats-heading">THỐNG KÊ TỔNG QUAN</div>
           <div class="stats-total-label">Tổng số phương tiện</div>
-          <div class="stats-total-value" id="statTotal">1,284</div>
+          <div class="stats-total-value" id="statTotal">—</div>
           <div class="inout-row">
             <div class="inout-card">
               <div class="inout-label">TỔNG VÀO</div>
-              <div class="inout-val-in" id="statIn">742</div>
+              <div class="inout-val-in" id="statIn">—</div>
             </div>
             <div class="inout-card">
               <div class="inout-label">TỔNG RA</div>
-              <div class="inout-val-out" id="statOut">542</div>
+              <div class="inout-val-out" id="statOut">—</div>
             </div>
           </div>
           <hr class="separator" />
           <div class="vehicle-list" id="vehicleList">
-            <div class="vehicle-row">
-              <div class="vehicle-name"><span class="vehicle-icon">🛵</span>Xe máy</div>
-              <div class="vehicle-counts">
-                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">450</span></div>
-                <div class="vdivider"></div>
-                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">392</span></div>
-              </div>
-            </div>
-            <div class="vehicle-row">
-              <div class="vehicle-name"><span class="vehicle-icon">🚗</span>Ô tô</div>
-              <div class="vehicle-counts">
-                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">210</span></div>
-                <div class="vdivider"></div>
-                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">111</span></div>
-              </div>
-            </div>
-            <div class="vehicle-row">
-              <div class="vehicle-name"><span class="vehicle-icon">🚌</span>Xe buýt</div>
-              <div class="vehicle-counts">
-                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">25</span></div>
-                <div class="vdivider"></div>
-                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">20</span></div>
-              </div>
-            </div>
-            <div class="vehicle-row">
-              <div class="vehicle-name"><span class="vehicle-icon">🚚</span>Xe tải</div>
-              <div class="vehicle-counts">
-                <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">57</span></div>
-                <div class="vdivider"></div>
-                <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">19</span></div>
-              </div>
-            </div>
+            <div style="text-align:center; color:#aaa; padding: 20px; font-size: 0.9em;">Chưa có dữ liệu. Hãy upload video để bắt đầu.</div>
           </div>
         </div>
       </div>

@@ -59,7 +59,7 @@ const statOut = document.getElementById('statOut');
 const vehicleList = document.getElementById('vehicleList');
 
 // Hide progress section initially
-const progressSection = document.querySelector('.progress-section');
+const progressSection = document.getElementById('progressSection');
 if (progressSection) {
   progressSection.style.display = 'none';
 }
