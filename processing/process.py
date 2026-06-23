@@ -22,9 +22,11 @@ from app.config import (
     CLASS_IDS,
     VEHICLE_CLASSES,
     MODELS_DIR,
+    OUTPUTS_DIR,
     LINE_START,
     LINE_END,
     LINE_AUTO_Y_RATIO,
+    LINE_ANCHOR,
     TRACK_LOST_BUFFER,
     TRACK_ACTIVATION_THRESHOLD,
     TRACK_MINIMUM_MATCHING,
@@ -249,6 +251,11 @@ class VehicleDetector:
             codec=OUTPUT_VIDEO_CODEC,
             quality=OUTPUT_VIDEO_QUALITY,
         )
+        
+        # Live paths
+        task_id = Path(json_output_path).name.replace("_result.json", "")
+        live_json_path = OUTPUTS_DIR / f"{task_id}_live.json"
+        live_img_path = OUTPUTS_DIR / f"{task_id}_live.jpg"
 
         # ── 4. Khởi tạo tracker với fps thực (quan trọng!) ──
         self._init_tracker(fps)
@@ -260,13 +267,13 @@ class VehicleDetector:
         line_zone_out = sv.LineZone(
             start=line_out_start,
             end=line_out_end,
-            triggering_anchors=[sv.Position.BOTTOM_CENTER, sv.Position.CENTER],
+            triggering_anchors=[LINE_ANCHOR],
         )
         # Line zone cho xe đi lên (bên phải)
         line_zone_in = sv.LineZone(
             start=line_in_start,
             end=line_in_end,
-            triggering_anchors=[sv.Position.BOTTOM_CENTER, sv.Position.CENTER],
+            triggering_anchors=[LINE_ANCHOR],
         )
         
         line_annotator = sv.LineZoneAnnotator(
@@ -292,7 +299,8 @@ class VehicleDetector:
         )
 
         # ── 7. Counting state ──
-        counted_ids: set = set()          # track_id đã được đếm (không đếm trùng)
+        counted_in_ids: set = set()      # track_id đã đếm ở LINE IN
+        counted_out_ids: set = set()     # track_id đã đếm ở LINE OUT
         seen_track_ids: set = set()      # tất cả track_id đã xuất hiện
         all_events: List[dict] = []       # danh sách sự kiện crossing
         timeline_dict: Dict[int, dict] = {}  # second -> {car, motorcycle, bus, truck}
@@ -315,7 +323,7 @@ class VehicleDetector:
                 crossed_in_mask_out, crossed_out_mask_out = line_zone_out.trigger(detections=tracked)
                 crossed_in_mask_in, crossed_out_mask_in = line_zone_in.trigger(detections=tracked)
 
-                # ── C. Ghi sự kiện crossing ──
+                # ── C. Ghi sự kiện crossing (Tách biệt logic đếm) ──
                 timestamp = frame_number / fps
                 second = int(timestamp)
 
@@ -327,51 +335,65 @@ class VehicleDetector:
                     class_name = VEHICLE_CLASSES.get(class_id, "unknown")
                     confidence = float(tracked.confidence[i]) if tracked.confidence is not None else 0.0
 
-                    # Kiểm tra: xe có cắt vạch không? (in HOẶC out trên cả 2 LineZone)
+                    # Check crossing
+                    # Lưu ý: Hạ thấp LINE IN (Y tăng) và nâng cao LINE OUT (Y giảm)
                     is_in_crossed_in = bool(crossed_in_mask_in[i]) if i < len(crossed_in_mask_in) else False
                     is_in_crossed_out = bool(crossed_out_mask_in[i]) if i < len(crossed_out_mask_in) else False
                     
                     is_out_crossed_in = bool(crossed_in_mask_out[i]) if i < len(crossed_in_mask_out) else False
                     is_out_crossed_out = bool(crossed_out_mask_out[i]) if i < len(crossed_out_mask_out) else False
 
-                    is_crossed = False
-                    direction = None
-                    
-                    if is_in_crossed_in or is_in_crossed_out:
-                        is_crossed = True
-                        direction = "in" if is_in_crossed_in else "out"
-                    elif is_out_crossed_in or is_out_crossed_out:
-                        is_crossed = True
-                        direction = "in" if is_out_crossed_in else "out"
+                    # Logic:
+                    # LINE IN (right lane): UP = IN, DOWN = OUT
+                    # LINE OUT (left lane): DOWN = OUT, UP = IN
 
-                    if is_crossed and (track_id not in counted_ids):
-                        # Lọc confidence thấp: tránh false positive khi đếm
-                        if confidence < COUNT_CONF_MIN:
-                            continue
-                        # Chỉ đếm lần đầu tiên
-                        counted_ids.add(track_id)
+                    # 1. Đếm LINE IN
+                    if (is_in_crossed_in or is_out_crossed_in) and confidence >= COUNT_CONF_MIN:
+                        if track_id not in counted_in_ids:
+                            counted_in_ids.add(track_id)
+                            all_events.append({
+                                "frame": frame_number,
+                                "timestamp": round(timestamp, 3),
+                                "track_id": track_id,
+                                "class": class_name,
+                                "confidence": round(confidence, 4),
+                                "direction": "in",
+                            })
+                            # Cập nhật timeline
+                            if second not in timeline_dict:
+                                timeline_dict[second] = {
+                                    "second": second,
+                                    "car": 0,
+                                    "motorcycle": 0,
+                                    "bus": 0,
+                                    "truck": 0,
+                                }
+                            if class_name in timeline_dict[second]:
+                                timeline_dict[second][class_name] += 1
 
-                        # Ghi event
-                        all_events.append({
-                            "frame": frame_number,
-                            "timestamp": round(timestamp, 3),
-                            "track_id": track_id,
-                            "class": class_name,
-                            "confidence": round(confidence, 4),
-                            "direction": direction,
-                        })
-
-                        # Cập nhật timeline
-                        if second not in timeline_dict:
-                            timeline_dict[second] = {
-                                "second": second,
-                                "car": 0,
-                                "motorcycle": 0,
-                                "bus": 0,
-                                "truck": 0,
-                            }
-                        if class_name in timeline_dict[second]:
-                            timeline_dict[second][class_name] += 1
+                    # 2. Đếm LINE OUT
+                    if (is_out_crossed_out or is_in_crossed_out) and confidence >= COUNT_CONF_MIN:
+                        if track_id not in counted_out_ids:
+                            counted_out_ids.add(track_id)
+                            all_events.append({
+                                "frame": frame_number,
+                                "timestamp": round(timestamp, 3),
+                                "track_id": track_id,
+                                "class": class_name,
+                                "confidence": round(confidence, 4),
+                                "direction": "out",
+                            })
+                            # Cập nhật timeline
+                            if second not in timeline_dict:
+                                timeline_dict[second] = {
+                                    "second": second,
+                                    "car": 0,
+                                    "motorcycle": 0,
+                                    "bus": 0,
+                                    "truck": 0,
+                                }
+                            if class_name in timeline_dict[second]:
+                                timeline_dict[second][class_name] += 1
 
                 # ── D. Annotate frame ──
                 annotated = frame.copy()
@@ -388,8 +410,9 @@ class VehicleDetector:
                     tid = int(tracked.tracker_id[i]) if tracked.tracker_id is not None else -1
                     cid = int(tracked.class_id[i])
                     cname = VEHICLE_CLASSES.get(cid, "?")
-                    is_counted = " ✓" if tid in counted_ids else ""
-                    labels.append(f"#{tid} {cname}{is_counted}")
+                    is_counted_in = " IN" if tid in counted_in_ids else ""
+                    is_counted_out = " OUT" if tid in counted_out_ids else ""
+                    labels.append(f"#{tid} {cname}{is_counted_in}{is_counted_out}")
 
                 if labels:
                     annotated = label_annotator.annotate(
@@ -397,29 +420,70 @@ class VehicleDetector:
                     )
 
                 # 4) LineZones (vạch kẻ + vẽ nhãn IN/OUT riêng biệt cho từng lane)
-                # Left line: chỉ vẽ OUT
+                # Left line (line_zone_out): xe đi xuống → out (normal down nên .in_count)
                 draw_custom_line_zone(
                     annotated, 
                     line_out_start, 
                     line_out_end, 
                     label="LINE OUT", 
-                    count=line_zone_out.out_count, 
+                    count=len(counted_out_ids), 
                     color=(0, 255, 255), 
                     is_in_line=False
                 )
-                # Right line: chỉ vẽ IN
+                # Right line (line_zone_in): xe đi lên → in (normal down nên .out_count)
                 draw_custom_line_zone(
                     annotated, 
                     line_in_start, 
                     line_in_end, 
                     label="LINE IN", 
-                    count=line_zone_in.in_count, 
+                    count=len(counted_in_ids), 
                     color=(0, 255, 255), 
                     is_in_line=True
                 )
 
                 # ── E. Ghi frame ra video ──
                 writer.write(annotated)
+                
+                # ── E2. Export live frames/stats ──
+                if (frame_number + 1) % 5 == 0: # Every 5 frames for stream
+                    try:
+                        # Save image
+                        cv2.imwrite(str(live_img_path), annotated)
+                        
+                        # Build live results dict
+                        live_timeline = []
+                        if timeline_dict:
+                            for sec in range(max(timeline_dict.keys()) + 1):
+                                if sec in timeline_dict:
+                                    live_timeline.append(timeline_dict[sec])
+                                else:
+                                    live_timeline.append({"second": sec, "car": 0, "motorcycle": 0, "bus": 0, "truck": 0})
+                        
+                        curr_duration = (frame_number + 1) / fps if fps > 0 else 0.0
+                        live_summary = {"car": 0, "motorcycle": 0, "bus": 0, "truck": 0}
+                        for evt in all_events:
+                            cls = evt["class"]
+                            if cls in live_summary:
+                                live_summary[cls] += 1
+                        live_summary["total"] = sum(live_summary.values())
+                        
+                        live_results = {
+                            "metadata": {
+                                "video_duration": round(curr_duration, 3),
+                                "fps": round(fps, 3),
+                                "total_frames": total_frames,
+                                "resolution": f"{width}x{height}",
+                                "processed_frames": frame_number + 1,
+                            },
+                            "summary": live_summary,
+                            "timeline": live_timeline,
+                            "events": all_events,
+                        }
+                        
+                        with open(live_json_path, "w", encoding="utf-8") as f:
+                            json.dump(live_results, f, ensure_ascii=False)
+                    except Exception:
+                        pass
 
                 # ── F. Progress callback ──
                 if callback and total_frames > 0:
@@ -428,11 +492,16 @@ class VehicleDetector:
 
                 if (frame_number + 1) % 60 == 0:
                     progress = int((frame_number / total_frames) * 100) if total_frames > 0 else 0
-                    print(f"  ⏳ {progress}% — frame {frame_number + 1}/{total_frames} | Crossed: {len(counted_ids)}")
+                    print(f"  ⏳ {progress}% — frame {frame_number + 1}/{total_frames} | IN: {len(counted_in_ids)} | OUT: {len(counted_out_ids)}")
 
         finally:
             writer.release()
-            print(f"\n✅ Video processing complete! Total crossed: {len(all_events)} events, {len(counted_ids)} unique vehicles")
+            # Cleanup live files
+            live_json_path.unlink(missing_ok=True)
+            live_img_path.unlink(missing_ok=True)
+            
+            total_crossed = len(counted_in_ids) + len(counted_out_ids)
+            print(f"\n✅ Video processing complete! Total crossed: {len(all_events)} events, IN={len(counted_in_ids)} OUT={len(counted_out_ids)}")
             print(f"   Observed track IDs: {len(seen_track_ids)}")
 
         # ── 7. Build results JSON ──
@@ -484,7 +553,7 @@ class VehicleDetector:
     def _compute_summary(self, events: List[dict]) -> dict:
         """
         Tính tổng số xe mỗi loại đã đi qua vạch kẻ.
-        Mỗi track_id chỉ được tính 1 lần (đã được đảm bảo bởi counted_ids).
+        Mỗi track_id được phép đếm 2 lần (1 lần IN, 1 lần OUT) vì dùng 2 bộ đếm riêng (counted_in_ids & counted_out_ids).
 
         Args:
             events: Danh sách crossing events (đã lọc chỉ xe qua vạch)
@@ -493,15 +562,13 @@ class VehicleDetector:
             dict: Tổng số xe mỗi loại + total
         """
         summary = {"car": 0, "motorcycle": 0, "bus": 0, "truck": 0}
-        seen_ids = set()
 
+        # Đếm tất cả events (mỗi event là 1 lần cắt vạch, direction riêng)
+        # Không cần deduplicate track_id vì counted_in_ids/counted_out_ids đã chống trùng
         for event in events:
-            tid = event["track_id"]
             cls = event["class"]
-            if tid not in seen_ids:
-                seen_ids.add(tid)
-                if cls in summary:
-                    summary[cls] += 1
+            if cls in summary:
+                summary[cls] += 1
 
         summary["total"] = sum(summary.values())
         return summary

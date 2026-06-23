@@ -138,3 +138,5 @@ nav { display: flex; flex-direction: column; gap: 4px; padding: 4px 8px; }
   .topnav-right { display: none; }
   .topnav { display: none; }
 }
+
+.hidden { display: none !important; }

@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import aiofiles
+import asyncio
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -196,7 +197,7 @@ async def get_status(task_id: str):
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
-        return {
+        response = {
             "task_id": task_id,
             "status": task["status"],
             "progress": task["progress"],
@@ -204,11 +205,51 @@ async def get_status(task_id: str):
             "created_at": task["created_at"],
             "updated_at": task["updated_at"],
         }
+        
+        # Load realtime stats if available
+        if task["status"] == TASK_STATUS_PROCESSING:
+            live_json_path = OUTPUTS_DIR / f"{task_id}_live.json"
+            if live_json_path.exists():
+                try:
+                    with open(live_json_path, "r", encoding="utf-8") as f:
+                        response["live_stats"] = json.load(f)
+                except Exception:
+                    pass
+        
+        return response
     
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/stream/{task_id}")
+async def stream_video(task_id: str):
+    """Stream MJPEG frames for real-time visualization"""
+    live_path = OUTPUTS_DIR / f"{task_id}_live.jpg"
+    
+    async def frame_generator():
+        last_mtime = 0
+        while True:
+            task = db.get_task(task_id)
+            if not task or task["status"] in [TASK_STATUS_DONE, TASK_STATUS_FAILED]:
+                break
+            if live_path.exists():
+                try:
+                    mtime = live_path.stat().st_mtime
+                    if mtime != last_mtime:
+                        last_mtime = mtime
+                        with open(live_path, "rb") as f:
+                            frame = f.read()
+                        if frame:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                except Exception:
+                    pass
+            await asyncio.sleep(0.05) # ~20 FPS polling
+            
+    return StreamingResponse(frame_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.get("/result/{task_id}")

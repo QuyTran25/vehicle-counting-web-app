@@ -1,6 +1,7 @@
 """
 Utility functions for video processing
 """
+
 import cv2
 from pathlib import Path
 from typing import Tuple, Optional
@@ -13,7 +14,7 @@ from app.config import SUPPORTED_VIDEO_FORMATS, MAX_VIDEO_SIZE_MB
 def validate_video(video_path: str) -> Tuple[bool, Optional[str]]:
     """
     Validate if a video file is readable and has supported format.
-    
+
     Args:
         video_path: Path to video file
         
@@ -26,32 +27,69 @@ def validate_video(video_path: str) -> Tuple[bool, Optional[str]]:
         if not path.exists():
             return False, f"Video file not found: {video_path}"
         
+        # Check file size — reject empty or 0-byte files
+        file_size = path.stat().st_size
+        if file_size == 0:
+            return False, "File rỗng (0 byte). Vui lòng chọn file video hợp lệ."
+        
+        # Minimum file size: a valid video must be at least a few KB
+        if file_size < 1024 * 10:  # Less than 10KB
+            return False, f"File quá nhỏ ({file_size} bytes). Có thể không phải video hợp lệ."
+        
         # Check file extension
         if path.suffix.lower() not in SUPPORTED_VIDEO_FORMATS:
             supported = ", ".join(SUPPORTED_VIDEO_FORMATS)
-            return False, f"Unsupported format. Supported: {supported}"
+            return False, f"Định dạng không được hỗ trợ. Chỉ chấp nhận: {supported}"
         
         # Check file size
-        file_size_mb = path.stat().st_size / (1024 * 1024)
+        file_size_mb = file_size / (1024 * 1024)
         if file_size_mb > MAX_VIDEO_SIZE_MB:
-            return False, f"Video too large. Max: {MAX_VIDEO_SIZE_MB}MB, Got: {file_size_mb:.1f}MB"
+            return False, f"Video quá lớn. Tối đa: {MAX_VIDEO_SIZE_MB}MB, File: {file_size_mb:.1f}MB"
+        
+        # Magic bytes check — verify it's actually a video, not just renamed .txt
+        try:
+            with open(path, "rb") as f:
+                header = f.read(16)
+            # Common video magic bytes
+            # MP4/MOV: 00 00 00 XX ftyp / 00 00 00 XX moov / 00 00 00 XX mdat
+            # AVI: 52 49 46 46 ... 41 56 49 (RIFF ... AVI)
+            # MKV: 1A 45 DF A3
+            is_mp4 = header[4:8] in [b"ftyp", b"moov", b"mdat"]
+            is_avi = header[0:4] == b"RIFF" and header[8:12] == b"AVI "
+            is_mkv = header[0:4] == bytes([0x1A, 0x45, 0xDF, 0xA3])
+            
+            if not (is_mp4 or is_avi or is_mkv):
+                # Not a guaranteed fail — some files have different headers
+                # but at least warn about likely wrong files
+                print(f"[Validation] Warning: {path.name} has unusual header: {header[:8].hex()}")
+        except Exception as e:
+            # Magic check is best-effort — don't fail if we can't read header
+            print(f"[Validation] Could not check magic bytes: {e}")
         
         # Try to open with OpenCV
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            return False, "Cannot open video file. File may be corrupted or codec not supported."
+            cap.release()
+            return False, "Không thể mở file video. File có thể bị hỏng hoặc codec không được hỗ trợ."
         
         # Check if video has frames
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if frame_count == 0:
             cap.release()
-            return False, "Video has no frames"
+            return False, "Video không có frame nào."
+        
+        # Check width/height are valid
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        if width == 0 or height == 0:
+            cap.release()
+            return False, "Video có kích thước không hợp lệ (0x0)."
         
         cap.release()
         return True, None
         
     except Exception as e:
-        return False, f"Validation error: {str(e)}"
+        return False, f"Lỗi kiểm tra video: {str(e)}"
 
 
 def get_video_info(video_path: str) -> dict:

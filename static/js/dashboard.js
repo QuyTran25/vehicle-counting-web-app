@@ -117,21 +117,69 @@ function handleVideoUpload(file) {
     method: 'POST',
     body: formData
   })
-  .then(res => {
-    if (!res.ok) throw new Error('Tải lên thất bại');
+  .then(async res => {
+    if (!res.ok) {
+      // Parse FastAPI error response
+      let errorMsg = 'Tải lên thất bại';
+      try {
+        const errorData = await res.json();
+        if (errorData && errorData.detail) {
+          // FastAPI HTTPException format: {"detail": "error message"}
+          errorMsg = errorData.detail;
+        } else if (errorData && errorData.message) {
+          errorMsg = errorData.message;
+        } else {
+          // Fallback for non-JSON errors
+          errorMsg = `Lỗi ${res.status}: ${res.statusText}`;
+        }
+      } catch (e) {
+        // If JSON parse fails, use status text
+        errorMsg = `Lỗi ${res.status}: ${res.statusText}`;
+      }
+      
+      // Special handling for specific error codes
+      if (res.status === 400) {
+        showToast('⚠️ ' + errorMsg);
+        progressLabel.textContent = 'File không hợp lệ: ' + errorMsg;
+      } else if (res.status === 413) {
+        showToast('⚠️ File quá lớn. Vui lòng chọn video nhỏ hơn.');
+        progressLabel.textContent = 'File quá lớn.';
+      } else {
+        showToast('❌ Lỗi: ' + errorMsg);
+        progressLabel.textContent = 'Lỗi tải video: ' + errorMsg;
+      }
+      return;
+    }
     return res.json();
   })
   .then(data => {
-    showToast('Tải video thành công, đang xếp hàng xử lý.');
+    if (!data) return;
+    showToast('✓ Tải video thành công, đang xếp hàng xử lý.');
     pollStatus(data.task_id);
   })
   .catch(err => {
-    showToast('Lỗi tải video: ' + err.message);
-    progressLabel.textContent = 'Lỗi tải video lên.';
+    showToast('❌ Lỗi kết nối: ' + err.message);
+    progressLabel.textContent = 'Lỗi kết nối server.';
   });
 }
 
 function pollStatus(taskId) {
+  // Setup realtime stream
+  const liveStream = document.getElementById('liveStream');
+  const outputVideo = document.getElementById('outputVideo');
+  const dropContent = document.getElementById('dropContent');
+  
+  if (liveStream) {
+    liveStream.src = `/stream/${taskId}`;
+    liveStream.style.display = 'block';
+  }
+  if (outputVideo) {
+    outputVideo.style.display = 'none';
+  }
+  if (dropContent) {
+    dropContent.style.display = 'none';
+  }
+
   const interval = setInterval(() => {
     fetch(`/status/${taskId}`)
     .then(res => {
@@ -140,6 +188,11 @@ function pollStatus(taskId) {
     })
     .then(data => {
       const progress = data.progress || 0;
+      
+      // Realtime stats update
+      if (data.live_stats) {
+        updateUIRealtime(data.live_stats);
+      }
       
       if (data.status === 'queued') {
         progressLabel.textContent = 'Đang chờ xử lý...';
@@ -155,18 +208,40 @@ function pollStatus(taskId) {
         processingBadge.classList.add('hidden');
         clearInterval(interval);
         showToast('Xử lý video hoàn thành!');
+        
+        // Final fetch to ensure complete results and show final video
         fetchResults(taskId);
+        
+        // Hide stream
+        if (liveStream) {
+          liveStream.style.display = 'none';
+          liveStream.src = '';
+        }
       } else if (data.status === 'failed') {
         progressLabel.textContent = `Lỗi: ${data.error_msg || 'Xử lý thất bại'}`;
         processingBadge.classList.add('hidden');
         clearInterval(interval);
         showToast('Lỗi xử lý video!');
+        
+        // Hide stream and show drop zone
+        if (liveStream) {
+          liveStream.style.display = 'none';
+          liveStream.src = '';
+        }
+        if (dropContent) {
+          dropContent.style.display = 'flex';
+        }
       }
     })
     .catch(err => {
       console.error(err);
     });
   }, 1000);
+}
+
+function updateUIRealtime(stats) {
+  // Use the full updateUI function to redraw everything (charts, lists, totals)
+  updateUI(stats);
 }
 
 function fetchResults(taskId) {
@@ -270,19 +345,56 @@ function updateUI(result) {
     const durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     progressTime.textContent = `${durationStr} / ${durationStr}`;
   }
+
+  // 6. Show final output video player
+  const outputVideo = document.getElementById('outputVideo');
+  const dropContent = document.getElementById('dropContent');
+  const liveStream = document.getElementById('liveStream');
+  if (outputVideo && result.output_video) {
+    outputVideo.src = result.output_video;
+    outputVideo.style.display = 'block';
+    if (dropContent) dropContent.style.display = 'none';
+    if (liveStream) liveStream.style.display = 'none';
+  }
 }
 
 // On Page Load: check if task_id parameter exists
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const taskId = urlParams.get('task_id');
+  
   if (taskId) {
-    // Show progress section
     if (progressSection) progressSection.style.display = 'block';
     progressLabel.textContent = 'Đang tải kết quả...';
-    progressFill.style.width = '50%';
+    progressFill.style.width = '20%';
     
-    // Fetch result
-    fetchResults(taskId);
+    // Check status first to see if it's still processing
+    fetch(`/status/${taskId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'done') {
+          fetchResults(taskId);
+        } else if (data.status === 'failed') {
+          progressLabel.textContent = `Lỗi: ${data.error_msg}`;
+        } else {
+          // Task is processing or queued, start live polling
+          pollStatus(taskId);
+        }
+      })
+      .catch(() => fetchResults(taskId)); // fallback
+  } else {
+    // No task_id in URL, check if there is an active running task
+    fetch('/tasks?limit=5')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.tasks) {
+          const activeTask = data.tasks.find(t => t.status === 'processing' || t.status === 'queued');
+          if (activeTask) {
+            if (progressSection) progressSection.style.display = 'block';
+            pollStatus(activeTask.id);
+          }
+        }
+      })
+      .catch(err => console.error('Error checking active tasks:', err));
   }
 });

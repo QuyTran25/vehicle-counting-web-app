@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import supervision as sv
 
 # Project Paths
 
@@ -29,7 +30,7 @@ CLASS_IDS = list(VEHICLE_CLASSES.keys())  # [2, 3, 5, 7]
 # yolov8s.pt tốt hơn yolov8n.pt cho xe nhỏ/xa, chấp nhận chậm hơn ~20%
 MODEL_NAME = "yolov8s.pt"
 CONF_THRESHOLD = 0.25  # Thấp để bắt xe máy nhỏ/xa; confidence filter khi đếm dùng COUNT_CONF_MIN
-IOU_THRESHOLD = 0.45   # IoU threshold for NMS
+IOU_THRESHOLD = 0.65   # IoU threshold for NMS
 
 # Chỉ đếm crossing khi confidence đủ cao (tránh false positive)
 COUNT_CONF_MIN = 0.25
@@ -46,6 +47,7 @@ TRACK_MINIMUM_MATCHING = 0.7
 TRACK_MINIMUM_CONSECUTIVE = 1  # kích hoạt track ngay frame đầu để không miss xe máy
 
 # LineZone Configuration
+LINE_ANCHOR = sv.Position.CENTER  # Sử dụng tâm hình học thay vì BOTTOM_CENTER để ổn định
 LINE_START = (0, 540)
 LINE_END = (1920, 540)
 LINE_AUTO_Y_RATIO = 0.72   # 72% chiều cao → xe lớn hơn, tracking ổn định hơn khi qua line

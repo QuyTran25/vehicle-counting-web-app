@@ -26,11 +26,22 @@ def test_invalid_file():
         r = requests.post(f"{BASE_URL}/upload", files={"file": ("test.txt", f)})
     
     print(f"Status Code: {r.status_code}")
-    print(f"Response: {r.json()}")
+    try:
+        response_data = r.json()
+        print(f"Response: {response_data}")
+        
+        # FastAPI returns {"detail": "error message"} for HTTPException
+        error_msg = response_data.get("detail") or response_data.get("message") or str(response_data)
+    except Exception:
+        error_msg = r.text
+        print(f"Raw Response: {error_msg}")
+    
+    # Should return 400 for invalid file (extension not in SUPPORTED_VIDEO_FORMATS)
     if r.status_code == 400:
         print("[SUCCESS] Invalid file rejected correctly.")
+        print(f"  Error message: {error_msg}")
     else:
-        print("[FAIL] Invalid file not rejected.")
+        print(f"[FAIL] Invalid file not rejected. Status: {r.status_code}")
 
 def test_backup_mode():
     print("\n--- TEST 2: Backup Mode Fallback Test ---")

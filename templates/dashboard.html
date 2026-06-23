@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/static/css/common.css" />
-  <link rel="stylesheet" href="/static/css/dashboard.css" />
+  <link rel="stylesheet" href="/static/css/common.css?v=2" />
+  <link rel="stylesheet" href="/static/css/dashboard.css?v=2" />
 </head>
 <body>
 
@@ -86,6 +86,8 @@
               <div class="drop-label">Kéo thả file vào đây</div>
               <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
             </div>
+            <img id="liveStream" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;" />
+            <video id="outputVideo" controls style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;"></video>
           </div>
           <input type="file" id="fileInput" accept="video/*" />
           <div class="progress-section" id="progressSection" style="display:none;">
@@ -140,7 +142,7 @@
   </div>
 
   <div id="toast"></div>
-  <script src="/static/js/common.js"></script>
-  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/common.js?v=2"></script>
+  <script src="/static/js/dashboard.js?v=2"></script>
 </body>
 </html>
