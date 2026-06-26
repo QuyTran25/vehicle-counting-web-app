@@ -51,9 +51,13 @@ def _start_worker_if_needed():
 def _queue_worker():
     while True:
         try:
-            task_id, video_path = _task_queue.get()
+            # Accept tuple of 2 or 3 elements for backward compatibility
+            item = _task_queue.get()
+            task_id, video_path = item[0], item[1]
+            single_lane = item[2] if len(item) > 2 else False
+            
             try:
-                _process_video_subprocess(task_id, video_path)
+                _process_video_subprocess(task_id, video_path, single_lane=single_lane)
             except Exception as e:
                 print(f"[ProcessRunner] Error processing task {task_id}: {e}")
             finally:
@@ -62,13 +66,13 @@ def _queue_worker():
             print(f"[ProcessRunner] Worker exception: {e}")
 
 
-def run_process_in_background(task_id: str, video_path: str):
+def run_process_in_background(task_id: str, video_path: str, single_lane: bool = False):
     """
     Kích hoạt chạy YOLO bằng cách thêm vào hàng đợi (concurrency limit).
     """
     _start_worker_if_needed()
-    _task_queue.put((task_id, video_path))
-    print(f"[ProcessRunner] Queued task {task_id}")
+    _task_queue.put((task_id, video_path, single_lane))
+    print(f"[ProcessRunner] Queued task {task_id} (single_lane={single_lane})")
 
 
 def _apply_backup_mode(task_id: str, video_path: str) -> bool:
@@ -130,7 +134,7 @@ def _read_output_thread(stdout_pipe, lines_list, done_event):
         done_event.set()
 
 
-def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: int = 600):
+def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: int = 600, single_lane: bool = False):
     """
     Chạy AI engine trong subprocess riêng biệt với timeout protection.
 
@@ -138,6 +142,7 @@ def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: in
         task_id: Task ID để cập nhật trạng thái
         video_path: Đường dẫn video đầu vào
         timeout_seconds: Timeout cho subprocess (default 10 phút). Nếu vượt quá → kill process
+        single_lane: Override to single lane if True
     """
     db = Database()
     process = None
@@ -173,6 +178,8 @@ def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: in
             str(output_video),
             str(output_json)
         ]
+        if single_lane:
+            cmd.append("--single-lane")
 
         print(f"[ProcessRunner] Starting subprocess: {' '.join(cmd)}")
         print(f"[ProcessRunner] Timeout: {timeout_seconds}s ({timeout_seconds // 60} min)")

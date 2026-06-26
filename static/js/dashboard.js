@@ -103,8 +103,12 @@ function handleVideoUpload(file) {
     return;
   }
 
+  // Get selected mode
+  const mode = document.querySelector('.lane-btn.active').dataset.mode;
+  
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('single_lane', mode === 'single' ? 'true' : 'false');
 
   // Show progress section
   if (progressSection) progressSection.style.display = 'block';
@@ -360,6 +364,16 @@ function updateUI(result) {
 
 // On Page Load: check if task_id parameter exists
 window.addEventListener('DOMContentLoaded', () => {
+  // Lane selector button handler
+  const laneBtns = document.querySelectorAll('.lane-btn');
+  laneBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Avoid triggering file input click since selector is inside upload card
+      laneBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
   const urlParams = new URLSearchParams(window.location.search);
   const taskId = urlParams.get('task_id');
   

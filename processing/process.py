@@ -33,6 +33,14 @@ from app.config import (
     TRACK_MINIMUM_CONSECUTIVE,
     OUTPUT_VIDEO_CODEC,
     OUTPUT_VIDEO_QUALITY,
+    # New config parameters
+    MIN_BOX_AREA,
+    MAX_BOX_AREA,
+    MIN_BOX_WIDTH,
+    MIN_BOX_HEIGHT,
+    MAX_ASPECT_RATIO,
+    MIN_ASPECT_RATIO,
+    IS_SINGLE_LANE,
 )
 from processing.utils import (
     validate_video,
@@ -42,18 +50,74 @@ from processing.utils import (
 )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DETECTION FILTERS - Loại bỏ false detections
+# ─────────────────────────────────────────────────────────────────────────────
+
+def filter_detections(detections: sv.Detections) -> sv.Detections:
+    """
+    Lọc detections dựa trên size và aspect ratio.
+    
+    Loại bỏ:
+    - Boxes quá nhỏ (noise)
+    - Boxes quá lớn (anomalies)
+    - Aspect ratio không hợp lệ cho xe
+    
+    Args:
+        detections: YOLO detections
+        
+    Returns:
+        Filtered detections
+    """
+    if len(detections) == 0:
+        return detections
+    
+    # Lấy thông tin boxes
+    xyxy = detections.xyxy  # [x1, y1, x2, y2]
+    
+    # Tính width, height, area
+    widths = xyxy[:, 2] - xyxy[:, 0]
+    heights = xyxy[:, 3] - xyxy[:, 1]
+    areas = widths * heights
+    
+    # Tính aspect ratio (width / height)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        aspect_ratios = widths / heights
+        aspect_ratios = np.nan_to_num(aspect_ratios, nan=0, posinf=0, neginf=0)
+    
+    # Tạo mask cho detections hợp lệ
+    valid_mask = (
+        (areas >= MIN_BOX_AREA) &          # Diện tích >= ngưỡng tối thiểu
+        (areas <= MAX_BOX_AREA) &           # Diện tích <= ngưỡng tối đa
+        (widths >= MIN_BOX_WIDTH) &         # Chiều rộng >= ngưỡng
+        (heights >= MIN_BOX_HEIGHT) &       # Chiều cao >= ngưỡng
+        (aspect_ratios >= MIN_ASPECT_RATIO) &  # AR >= tối thiểu
+        (aspect_ratios <= MAX_ASPECT_RATIO)    # AR <= tối đa
+    )
+    
+    # Áp dụng filter
+    filtered = detections[valid_mask]
+    
+    # Debug log số lượng bị loại
+    removed = len(detections) - len(filtered)
+    if removed > 0:
+        print(f"   [Filter] Removed {removed}/{len(detections)} detections (size/aspect invalid)")
+    
+    return filtered
+
+
 def compute_split_lines(width: int, height: int) -> Tuple[Tuple[sv.Point, sv.Point], Tuple[sv.Point, sv.Point]]:
     """
     Tính tọa độ cho 2 vạch kẻ:
-    - line_out (bên trái, hướng đi xuống): Y ở vị trí 72% chiều cao (thấp).
-    - line_in (bên phải, hướng đi lên): Y ở vị trí 35% chiều cao (cao).
-    Cho phép gối đầu (overlap) ở giữa để tránh sót xe đi sát dải phân cách do góc nhìn phối cảnh.
+    - line_out (bên trái, hướng đi xuống): Y ở vị trí 72% chiều cao.
+    - line_in (bên phải, hướng đi lên): Y ở vị trí 55% chiều cao.
+    Hạ thấp LINE IN (từ 35% xuống 55%) để đếm xe khi chúng còn đủ lớn, tránh mất tracking do xe đi quá xa và bị nhỏ lại.
     """
     divider_x_out = int(width * 0.48)
     divider_x_in = int(width * 0.46) # dải phân cách chéo về trái khi ở trên cao
     
     y_out = int(height * 0.72)
-    y_in = int(height * 0.35)
+    y_in = int(height * 0.55)  # Hạ thấp từ 0.35 -> 0.55 để đếm chính xác hơn
     
     # Left line (OUT): kéo dài qua dải phân cách một chút (+15px)
     line_out_start = sv.Point(x=0, y=y_out)
@@ -176,7 +240,7 @@ class VehicleDetector:
             frame: Input frame (numpy array)
 
         Returns:
-            sv.Detections: Detection results
+            sv.Detections: Detection results (filtered)
         """
         results = self.model(
             frame,
@@ -186,6 +250,10 @@ class VehicleDetector:
             verbose=False,
         )
         detections = sv.Detections.from_ultralytics(results[0])
+        
+        # Áp dụng filter
+        detections = filter_detections(detections)
+        
         return detections
 
     def update_tracker(self, detections: sv.Detections) -> sv.Detections:
@@ -211,6 +279,7 @@ class VehicleDetector:
         output_path: str,
         json_output_path: str,
         callback=None,
+        single_lane: bool = False,
     ) -> Dict[str, Any]:
         """
         Xử lý video frame-by-frame: detect → track → count (LineZone) → export.
@@ -225,6 +294,7 @@ class VehicleDetector:
             output_path: Đường dẫn lưu video output (đã vẽ annotations)
             json_output_path: Đường dẫn lưu kết quả JSON
             callback: Hàm callback báo tiến trình(frame_num, total_frames, progress%)
+            single_lane: Override config IS_SINGLE_LANE nếu True
 
         Returns:
             dict: Kết quả gồm metadata, summary, timeline, events
@@ -260,21 +330,33 @@ class VehicleDetector:
         # ── 4. Khởi tạo tracker với fps thực (quan trọng!) ──
         self._init_tracker(fps)
 
-        # ── 5. Setup LineZones (vạch kẻ chia đôi làn) ──
-        (line_out_start, line_out_end), (line_in_start, line_in_end) = compute_split_lines(width, height)
+        # ── 5. Setup LineZones ──
+        # ── 5. Setup LineZones ──
+        # use_single_lane = True → chỉ 1 line cho đường 1 chiều
+        # use_single_lane = False → 2 line (Left=OUT, Right=IN)
+        use_single_lane = single_lane or IS_SINGLE_LANE
         
-        # Line zone cho xe đi xuống (bên trái)
-        line_zone_out = sv.LineZone(
-            start=line_out_start,
-            end=line_out_end,
-            triggering_anchors=[LINE_ANCHOR],
-        )
-        # Line zone cho xe đi lên (bên phải)
-        line_zone_in = sv.LineZone(
-            start=line_in_start,
-            end=line_in_end,
-            triggering_anchors=[LINE_ANCHOR],
-        )
+        if use_single_lane:
+            # 1 LineZone duy nhất ở giữa
+            line_zone_out = sv.LineZone(
+                start=sv.Point(x=0, y=int(height*0.5)),
+                end=sv.Point(x=width, y=int(height*0.5)),
+                triggering_anchors=[LINE_ANCHOR],
+            )
+            line_zone_in = None # Không dùng
+        else:
+            # Dual lines
+            (line_out_start, line_out_end), (line_in_start, line_in_end) = compute_split_lines(width, height)
+            line_zone_out = sv.LineZone(
+                start=line_out_start,
+                end=line_out_end,
+                triggering_anchors=[LINE_ANCHOR],
+            )
+            line_zone_in = sv.LineZone(
+                start=line_in_start,
+                end=line_in_end,
+                triggering_anchors=[LINE_ANCHOR],
+            )
         
         line_annotator = sv.LineZoneAnnotator(
             thickness=3,
@@ -282,8 +364,12 @@ class VehicleDetector:
             text_thickness=2,
             text_scale=1.0,
         )
-        print(f"[LineZone] Out (left): ({line_out_start.x},{line_out_start.y}) -> ({line_out_end.x},{line_out_end.y})")
-        print(f"[LineZone] In (right): ({line_in_start.x},{line_in_start.y}) -> ({line_in_end.x},{line_in_end.y})")
+        print(f"[LineZone] Mode: {'SINGLE LANE' if use_single_lane else 'DUAL LANE'}")
+        if not use_single_lane:
+            print(f"[LineZone] Out (left): ({line_out_start.x},{line_out_start.y}) -> ({line_out_end.x},{line_out_end.y})")
+            print(f"[LineZone] In (right): ({line_in_start.x},{line_in_start.y}) -> ({line_in_end.x},{line_in_end.y})")
+        else:
+            print(f"[LineZone] Single line at y={int(height*0.5)}")
 
         # ── 6. Setup annotators ──
         box_annotator = sv.BoundingBoxAnnotator(thickness=2)
@@ -319,9 +405,13 @@ class VehicleDetector:
                     track_id = int(tracked.tracker_id[i])
                     seen_track_ids.add(track_id)
 
-                # ── B. LineZone trigger (kiểm tra xe cắt vạch ở cả 2 LineZone) ──
+                # ── B. LineZone trigger ──
                 crossed_in_mask_out, crossed_out_mask_out = line_zone_out.trigger(detections=tracked)
-                crossed_in_mask_in, crossed_out_mask_in = line_zone_in.trigger(detections=tracked)
+                if line_zone_in is not None:
+                    crossed_in_mask_in, crossed_out_mask_in = line_zone_in.trigger(detections=tracked)
+                else:
+                    crossed_in_mask_in = np.array([], dtype=bool)
+                    crossed_out_mask_in = np.array([], dtype=bool)
 
                 # ── C. Ghi sự kiện crossing (Tách biệt logic đếm) ──
                 timestamp = frame_number / fps
@@ -336,19 +426,18 @@ class VehicleDetector:
                     confidence = float(tracked.confidence[i]) if tracked.confidence is not None else 0.0
 
                     # Check crossing
-                    # Lưu ý: Hạ thấp LINE IN (Y tăng) và nâng cao LINE OUT (Y giảm)
-                    is_in_crossed_in = bool(crossed_in_mask_in[i]) if i < len(crossed_in_mask_in) else False
-                    is_in_crossed_out = bool(crossed_out_mask_in[i]) if i < len(crossed_out_mask_in) else False
-                    
-                    is_out_crossed_in = bool(crossed_in_mask_out[i]) if i < len(crossed_in_mask_out) else False
-                    is_out_crossed_out = bool(crossed_out_mask_out[i]) if i < len(crossed_out_mask_out) else False
+                    # Check crossing for each line zone (either direction of crossing is valid since lanes are physically split)
+                    is_crossed_in = (
+                        (bool(crossed_in_mask_in[i]) or bool(crossed_out_mask_in[i]))
+                        if i < len(crossed_in_mask_in) and i < len(crossed_out_mask_in) else False
+                    )
+                    is_crossed_out = (
+                        (bool(crossed_in_mask_out[i]) or bool(crossed_out_mask_out[i]))
+                        if i < len(crossed_in_mask_out) and i < len(crossed_out_mask_out) else False
+                    )
 
-                    # Logic:
-                    # LINE IN (right lane): UP = IN, DOWN = OUT
-                    # LINE OUT (left lane): DOWN = OUT, UP = IN
-
-                    # 1. Đếm LINE IN
-                    if (is_in_crossed_in or is_out_crossed_in) and confidence >= COUNT_CONF_MIN:
+                    # 1. Đếm LINE IN (Right lane - UP/IN traffic)
+                    if is_crossed_in and confidence >= COUNT_CONF_MIN:
                         if track_id not in counted_in_ids:
                             counted_in_ids.add(track_id)
                             all_events.append({
@@ -371,8 +460,8 @@ class VehicleDetector:
                             if class_name in timeline_dict[second]:
                                 timeline_dict[second][class_name] += 1
 
-                    # 2. Đếm LINE OUT
-                    if (is_out_crossed_out or is_in_crossed_out) and confidence >= COUNT_CONF_MIN:
+                    # 2. Đếm LINE OUT (Left lane - DOWN/OUT traffic)
+                    if is_crossed_out and confidence >= COUNT_CONF_MIN:
                         if track_id not in counted_out_ids:
                             counted_out_ids.add(track_id)
                             all_events.append({
@@ -420,26 +509,36 @@ class VehicleDetector:
                     )
 
                 # 4) LineZones (vạch kẻ + vẽ nhãn IN/OUT riêng biệt cho từng lane)
-                # Left line (line_zone_out): xe đi xuống → out (normal down nên .in_count)
-                draw_custom_line_zone(
-                    annotated, 
-                    line_out_start, 
-                    line_out_end, 
-                    label="LINE OUT", 
-                    count=len(counted_out_ids), 
-                    color=(0, 255, 255), 
-                    is_in_line=False
-                )
-                # Right line (line_zone_in): xe đi lên → in (normal down nên .out_count)
-                draw_custom_line_zone(
-                    annotated, 
-                    line_in_start, 
-                    line_in_end, 
-                    label="LINE IN", 
-                    count=len(counted_in_ids), 
-                    color=(0, 255, 255), 
-                    is_in_line=True
-                )
+                if use_single_lane:
+                    draw_custom_line_zone(
+                        annotated, 
+                        sv.Point(x=0, y=int(height*0.5)), 
+                        sv.Point(x=width, y=int(height*0.5)), 
+                        label="LINE", 
+                        count=len(counted_in_ids) + len(counted_out_ids), 
+                        color=(0, 255, 255), 
+                        is_in_line=True
+                    )
+                else:
+                    # Dual lines
+                    draw_custom_line_zone(
+                        annotated, 
+                        line_out_start, 
+                        line_out_end, 
+                        label="LINE OUT", 
+                        count=len(counted_out_ids), 
+                        color=(0, 255, 255), 
+                        is_in_line=False
+                    )
+                    draw_custom_line_zone(
+                        annotated, 
+                        line_in_start, 
+                        line_in_end, 
+                        label="LINE IN", 
+                        count=len(counted_in_ids), 
+                        color=(0, 255, 255), 
+                        is_in_line=True
+                    )
 
                 # ── E. Ghi frame ra video ──
                 writer.write(annotated)
@@ -583,6 +682,7 @@ def process_video_file(
     output_path: str,
     json_output_path: str,
     callback=None,
+    single_lane: bool = False,
 ) -> Dict:
     """
     Hàm đơn lẻ để xử lý video — được gọi từ web backend và CLI.
@@ -592,12 +692,13 @@ def process_video_file(
         output_path: Đường dẫn video output (đã annotate)
         json_output_path: Đường dẫn JSON kết quả
         callback: Optional progress callback(frame_num, total, progress%)
+        single_lane: Override mode to single lane if True
 
     Returns:
         dict: Kết quả xử lý
     """
     detector = VehicleDetector()
-    results = detector.process_video(input_path, output_path, json_output_path, callback)
+    results = detector.process_video(input_path, output_path, json_output_path, callback, single_lane)
     return results
 
 
@@ -608,24 +709,27 @@ def process_video_file(
 if __name__ == "__main__":
     """
     Chạy thủ công qua command-line:
-        python processing/process.py uploads/test1lan.mp4 outputs/test1lan_output.mp4 outputs/test1lan_result.json
+        python processing/process.py uploads/test1lan.mp4 outputs/test1lan_output.mp4 outputs/test1lan_result.json [--single-lane]
     """
     if len(sys.argv) < 4:
-        print("Usage: python processing/process.py <input_video> <output_video> <output_json>")
-        print("Example: python processing/process.py uploads/test1lan.mp4 outputs/out.mp4 outputs/result.json")
+        print("Usage: python processing/process.py <input_video> <output_video> <output_json> [--single-lane]")
+        print("Example: python processing/process.py uploads/test1lan.mp4 outputs/out.mp4 outputs/result.json --single-lane")
         sys.exit(1)
 
     input_video = sys.argv[1]
     output_video = sys.argv[2]
     output_json = sys.argv[3]
+    
+    single_lane_flag = "--single-lane" in sys.argv
 
     print(f"🚗 Vehicle Counting — LineZone Edition")
     print(f"   Input : {input_video}")
     print(f"   Output: {output_video}")
     print(f"   JSON  : {output_json}")
+    print(f"   Mode  : {'SINGLE LANE' if single_lane_flag else 'DUAL LANE'}")
 
     try:
-        results = process_video_file(input_video, output_video, output_json)
+        results = process_video_file(input_video, output_video, output_json, single_lane=single_lane_flag)
         print(f"\n✅ Done!")
         print(f"   Summary: {results['summary']}")
     except Exception as e:

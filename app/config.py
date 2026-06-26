@@ -25,32 +25,64 @@ VEHICLE_CLASSES = {
 }
 CLASS_IDS = list(VEHICLE_CLASSES.keys())  # [2, 3, 5, 7]
 
-# YOLO & Detection Configuration
-
-# yolov8s.pt tốt hơn yolov8n.pt cho xe nhỏ/xa, chấp nhận chậm hơn ~20%
-MODEL_NAME = "yolov8s.pt"
-CONF_THRESHOLD = 0.25  # Thấp để bắt xe máy nhỏ/xa; confidence filter khi đếm dùng COUNT_CONF_MIN
-IOU_THRESHOLD = 0.65   # IoU threshold for NMS
-
-# Chỉ đếm crossing khi confidence đủ cao (tránh false positive)
-COUNT_CONF_MIN = 0.25
-
 # Video Processing Configuration
 MAX_VIDEO_SIZE_MB = 500  # Maximum allowed upload size
 SUPPORTED_VIDEO_FORMATS = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv"}
 
-# ByteTrack Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# DETECTION CONFIGURATION - Tối ưu cho độ chính xác cao
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Model: best.pt — custom model trained for Vietnam traffic
+# yolov8s/yolov8m/yolov8l = pretrained Ultralytics models
+MODEL_NAME = "best.pt"
+
+# Confidence thresholds - TĂNG để giảm false positive
+CONF_THRESHOLD = 0.35       # Chỉ detect khi model chắc chắn ≥35%
+COUNT_CONF_MIN = 0.40       # Chỉ đếm khi confidence ≥40% (cao hơn detect)
+
+# NMS IoU - GIẢM để giữ lại nhiều detections hơn
+IOU_THRESHOLD = 0.50         # Giảm từ 0.65 - tránh miss overlapping vehicles
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIZE FILTERING - Loại bỏ false detections quá nhỏ/lớn
+# ─────────────────────────────────────────────────────────────────────────────
+
+MIN_BOX_AREA = 400           # Diện tích tối thiểu (pixels²) - loại noise
+MAX_BOX_AREA = 500000         # Diện tích tối đa - loại bỏ anomalies
+MIN_BOX_WIDTH = 20            # Chiều rộng tối thiểu
+MIN_BOX_HEIGHT = 20           # Chiều cao tối thiểu
+MAX_ASPECT_RATIO = 8.0        # Tỷ lệ width/height tối đa (xe không quá dài)
+MIN_ASPECT_RATIO = 0.15       # Tỷ lệ tối thiểu (xe không quá cao)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEMPORAL SMOOTHING - Yêu cầu detection phải xuất hiện nhiều frames
+# ─────────────────────────────────────────────────────────────────────────────
+
+TEMPORAL_CONFIRM_FRAMES = 2   # Detect cần xuất hiện 2 frames liên tiếp
+                                # Giúp loại bỏ flickers và ghost detections
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BYTETRACK CONFIG - Tracking ổn định hơn
+# ─────────────────────────────────────────────────────────────────────────────
+
 # frame_rate sẽ được truyền động từ fps thực của video trong process.py
-TRACK_LOST_BUFFER = 60        # giữ track 60 frames khi mất detection (~3s ở 20fps)
-TRACK_ACTIVATION_THRESHOLD = 0.25
-TRACK_MINIMUM_MATCHING = 0.7
-TRACK_MINIMUM_CONSECUTIVE = 1  # kích hoạt track ngay frame đầu để không miss xe máy
+TRACK_LOST_BUFFER = 45         # Giảm từ 60 - tránh phantom tracks (2s @ 22fps)
+TRACK_ACTIVATION_THRESHOLD = 0.30  # Tăng nhẹ - yêu cầu detection rõ hơn
+TRACK_MINIMUM_MATCHING = 0.80  # Tăng từ 0.7 - matching strict hơn
+TRACK_MINIMUM_CONSECUTIVE = 2  # Tăng từ 1 - cần 2 frames liên tiếp mới activate
 
 # LineZone Configuration
 LINE_ANCHOR = sv.Position.CENTER  # Sử dụng tâm hình học thay vì BOTTOM_CENTER để ổn định
 LINE_START = (0, 540)
 LINE_END = (1920, 540)
 LINE_AUTO_Y_RATIO = 0.72   # 72% chiều cao → xe lớn hơn, tracking ổn định hơn khi qua line
+
+# Làn đường đơn / đôi:
+# - True: chỉ có 1 làn (1 LineZone duy nhất ở giữa)
+# - False: có 2 làn (Left = OUT, Right = IN)
+# Lưu ý: Tự động cho dashboard để user cấu hình là phiên bản tương lai.
+IS_SINGLE_LANE = False  # Mặc định là 2 làn
 
 # Output Video Configuration
 OUTPUT_VIDEO_CODEC = "avc1"  # Try H.264 container-friendly codec for better output quality

@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -119,7 +119,7 @@ async def history():
 
 
 @app.post("/upload")
-async def upload_video(file: UploadFile = File(...)):
+async def upload_video(file: UploadFile = File(...), single_lane: bool = Form(False)):
     """
     Upload video for processing
     
@@ -167,7 +167,7 @@ async def upload_video(file: UploadFile = File(...)):
         
         # Start processing in background via subprocess
         from app.process_runner import run_process_in_background
-        run_process_in_background(task_id, str(file_path))
+        run_process_in_background(task_id, str(file_path), single_lane=single_lane)
         
         return {
             "task_id": task_id,

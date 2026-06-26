@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/static/css/common.css?v=2" />
-  <link rel="stylesheet" href="/static/css/dashboard.css?v=2" />
+  <link rel="stylesheet" href="/static/css/common.css?v=3" />
+  <link rel="stylesheet" href="/static/css/dashboard.css?v=3" />
 </head>
 <body>
 
@@ -90,6 +90,20 @@
             <video id="outputVideo" controls style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;"></video>
           </div>
           <input type="file" id="fileInput" accept="video/*" />
+          <!-- Lane Mode Selector -->
+          <div class="lane-selector" id="laneSelector">
+            <div class="lane-selector-label">Chế độ làn đường:</div>
+            <div class="lane-selector-options">
+              <button class="lane-btn active" id="laneDual" data-mode="dual" title="Đường 2 chiều - 2 vạch kẻ IN/OUT">
+                <span class="lane-icon">↔️</span>
+                <span class="lane-text">2 Làn (IN & OUT)</span>
+              </button>
+              <button class="lane-btn" id="laneSingle" data-mode="single" title="Đường 1 chiều - 1 vạch kẻ ở giữa">
+                <span class="lane-icon">→</span>
+                <span class="lane-text">1 Làn (Đơn)</span>
+              </button>
+            </div>
+          </div>
           <div class="progress-section" id="progressSection" style="display:none;">
             <div class="progress-meta">
               <span class="progress-label" id="progressLabel">Chờ upload video...</span>
@@ -142,7 +156,7 @@
   </div>
 
   <div id="toast"></div>
-  <script src="/static/js/common.js?v=2"></script>
-  <script src="/static/js/dashboard.js?v=2"></script>
+  <script src="/static/js/common.js?v=3"></script>
+  <script src="/static/js/dashboard.js?v=3"></script>
 </body>
 </html>
