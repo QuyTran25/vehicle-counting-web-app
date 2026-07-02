@@ -5,6 +5,7 @@ Chạy trực tiếp để khởi tạo DB: python app/database.py
 
 import sqlite3
 import os
+from typing import List
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database.db")
 
@@ -54,6 +55,18 @@ def init_db() -> None:
             events_json     TEXT,                  -- JSON array sự kiện crossing
             output_video    TEXT,                  -- đường dẫn file .mp4 output
             output_json     TEXT,                  -- đường dẫn file .json output
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        )
+    """)
+
+    # Bảng line_configs: lưu line thủ công cho từng task
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS line_configs (
+            task_id         TEXT PRIMARY KEY,
+            lines_json      TEXT NOT NULL,         -- JSON array: [{"id":"L1","label":"Line A","x1":0,"y1":540,"x2":1920,"y2":540,"flip_direction":false,"count_mode":"both"},...]
+            trigger_anchor  TEXT DEFAULT 'BOTTOM_CENTER',
+            created_at      TEXT NOT NULL
+                        DEFAULT (datetime('now')),
             FOREIGN KEY (task_id) REFERENCES tasks(id)
         )
     """)
@@ -188,7 +201,42 @@ def delete_task(task_id: str) -> None:
     """Xóa task và kết quả liên quan."""
     conn = get_connection()
     conn.execute("DELETE FROM results WHERE task_id = ?", (task_id,))
+    conn.execute("DELETE FROM line_configs WHERE task_id = ?", (task_id,))
     conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+def save_line_config(task_id: str, lines: List[dict], trigger_anchor: str = "BOTTOM_CENTER") -> None:
+    """Lưu line config cho task (insert or replace)."""
+    import json
+    conn = get_connection()
+    conn.execute(
+        """INSERT OR REPLACE INTO line_configs (task_id, lines_json, trigger_anchor, created_at)
+           VALUES (?, ?, ?, datetime('now'))""",
+        (task_id, json.dumps(lines, ensure_ascii=False), trigger_anchor),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_line_config(task_id: str) -> dict | None:
+    """Lấy line config của task. Trả về dict hoặc None."""
+    import json
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM line_configs WHERE task_id = ?", (task_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    data = dict(row)
+    data["lines"] = json.loads(data.pop("lines_json") or "[]")
+    return data
+
+
+def delete_line_config(task_id: str) -> None:
+    """Xóa line config của task."""
+    conn = get_connection()
+    conn.execute("DELETE FROM line_configs WHERE task_id = ?", (task_id,))
     conn.commit()
     conn.close()
 
@@ -235,6 +283,19 @@ class Database:
     def delete_task(self, task_id: str) -> None:
         """Xóa task"""
         delete_task(task_id)
+
+    # ── Line Configs ──
+    def save_line_config(self, task_id: str, lines: List[dict], trigger_anchor: str = "BOTTOM_CENTER") -> None:
+        """Lưu line config cho task"""
+        save_line_config(task_id, lines, trigger_anchor)
+
+    def get_line_config(self, task_id: str) -> dict | None:
+        """Lấy line config của task"""
+        return get_line_config(task_id)
+
+    def delete_line_config(self, task_id: str) -> None:
+        """Xóa line config của task"""
+        delete_line_config(task_id)
 
 
 # ──────────────────────────────────────────

@@ -33,9 +33,9 @@ SUPPORTED_VIDEO_FORMATS = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv"}
 # DETECTION CONFIGURATION - Tối ưu cho độ chính xác cao
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Model: best.pt — custom model trained for Vietnam traffic
-# yolov8s/yolov8m/yolov8l = pretrained Ultralytics models
-MODEL_NAME = "best.pt"
+# Model: yolov8s.pt — pretrained Ultralytics model (balanced speed/accuracy)
+# Available models: yolov8n.pt (nano), yolov8s.pt (small), yolov8m.pt (medium), yolov8l.pt (large)
+MODEL_NAME = "yolov8s.pt"
 
 # Confidence thresholds - TĂNG để giảm false positive
 CONF_THRESHOLD = 0.35       # Chỉ detect khi model chắc chắn ≥35%

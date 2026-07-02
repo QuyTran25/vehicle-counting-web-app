@@ -130,3 +130,391 @@
 .lane-icon {
   font-size: 16px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Manual Line Drawing Mode Styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Mode Selector */
+.mode-selector {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: rgba(248, 249, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mode-selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.mode-selector-options {
+  display: flex;
+  gap: 8px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mode-btn:hover {
+  border-color: #0041C8;
+  background: #f0f4ff;
+}
+.mode-btn.active {
+  border-color: #0041C8;
+  background: #e8f0fe;
+  color: #0041C8;
+  font-weight: 600;
+}
+.mode-icon {
+  font-size: 1.5em;
+}
+.mode-text {
+  font-size: 0.85em;
+}
+.mode-desc {
+  font-size: 0.7em;
+  color: #999;
+}
+
+/* Canvas Overlay */
+.canvas-overlay {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+.canvas-overlay.active {
+  display: block;
+}
+#lineCanvas {
+  width: 100%;
+  cursor: crosshair;
+  border-radius: 12px;
+}
+
+/* Line Drawing Tools */
+.line-tools {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.tool-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.tool-btn:hover {
+  border-color: #0041C8;
+  color: #0041C8;
+}
+.tool-btn.active {
+  background: #0041C8;
+  color: white;
+  border-color: #0041C8;
+}
+.tool-btn.danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+.tool-btn.danger:hover {
+  background: #dc3545;
+  color: white;
+}
+.tool-btn.success {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+/* Line Info */
+.line-info {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.line-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f0f4ff;
+  border-radius: 8px;
+  font-size: 0.85em;
+}
+.line-tag .line-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.line-tag .line-name {
+  font-weight: 500;
+}
+.line-tag .line-remove {
+  cursor: pointer;
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Process Button */
+.process-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #0041C8, #0056d6);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: none;
+}
+.process-btn.active {
+  display: block;
+}
+.process-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 65, 200, 0.3);
+}
+.process-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Warning Message */
+.warning-msg {
+  padding: 12px 16px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 0.9em;
+  margin-top: 12px;
+  display: none;
+}
+.warning-msg.active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Manual Line Drawing Mode Styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Mode Selector */
+.mode-selector {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: rgba(248, 249, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mode-selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.mode-selector-options {
+  display: flex;
+  gap: 8px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mode-btn:hover {
+  border-color: #0041C8;
+  background: #f0f4ff;
+}
+.mode-btn.active {
+  border-color: #0041C8;
+  background: #e8f0fe;
+  color: #0041C8;
+  font-weight: 600;
+}
+.mode-icon {
+  font-size: 1.5em;
+}
+.mode-text {
+  font-size: 0.85em;
+}
+.mode-desc {
+  font-size: 0.7em;
+  color: #999;
+}
+
+/* Canvas Overlay */
+.canvas-overlay {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+.canvas-overlay.active {
+  display: block;
+}
+#lineCanvas {
+  width: 100%;
+  cursor: crosshair;
+  border-radius: 12px;
+}
+
+/* Line Drawing Tools */
+.line-tools {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.tool-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.tool-btn:hover {
+  border-color: #0041C8;
+  color: #0041C8;
+}
+.tool-btn.active {
+  background: #0041C8;
+  color: white;
+  border-color: #0041C8;
+}
+.tool-btn.danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+.tool-btn.danger:hover {
+  background: #dc3545;
+  color: white;
+}
+.tool-btn.success {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+/* Line Info */
+.line-info {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.line-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f0f4ff;
+  border-radius: 8px;
+  font-size: 0.85em;
+}
+.line-tag .line-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.line-tag .line-name {
+  font-weight: 500;
+}
+.line-tag .line-remove {
+  cursor: pointer;
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Process Button */
+.process-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #0041C8, #0056d6);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: none;
+}
+.process-btn.active {
+  display: block;
+}
+.process-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 65, 200, 0.3);
+}
+.process-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Warning Message */
+.warning-msg {
+  padding: 12px 16px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 0.9em;
+  margin-top: 12px;
+  display: none;
+}
+.warning-msg.active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

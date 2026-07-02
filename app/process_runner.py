@@ -137,12 +137,13 @@ def _read_output_thread(stdout_pipe, lines_list, done_event):
 def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: int = 600, single_lane: bool = False):
     """
     Chạy AI engine trong subprocess riêng biệt với timeout protection.
+    Tự động phân biệt Auto vs Manual mode dựa trên line_config.
 
     Args:
         task_id: Task ID để cập nhật trạng thái
         video_path: Đường dẫn video đầu vào
         timeout_seconds: Timeout cho subprocess (default 10 phút). Nếu vượt quá → kill process
-        single_lane: Override to single lane if True
+        single_lane: Override to single lane if True (chỉ dùng cho auto mode)
     """
     db = Database()
     process = None
@@ -164,24 +165,46 @@ def _process_video_subprocess(task_id: str, video_path: str, timeout_seconds: in
         output_video = OUTPUTS_DIR / f"{task_id}_output.mp4"
         output_json = OUTPUTS_DIR / f"{task_id}_result.json"
 
-        # Script path của process.py
-        script_path = PROJECT_ROOT / "processing" / "process.py"
-
-        # Sử dụng python interpreter của môi trường hiện tại
         python_exe = sys.executable
 
-        cmd = [
-            python_exe,
-            "-u",
-            str(script_path),
-            str(video_path),
-            str(output_video),
-            str(output_json)
-        ]
-        if single_lane:
-            cmd.append("--single-lane")
+        # Kiểm tra xem có line_config (manual mode) không
+        line_config = db.get_line_config(task_id)
+        
+        if line_config:
+            # === CHẾ ĐỘ THỦ CÔNG ===
+            import supervision as sv
+            script_path = PROJECT_ROOT / "processing" / "process_manual.py"
+            trigger_anchor_str = line_config.get("trigger_anchor", "BOTTOM_CENTER")
+            trigger_anchor = sv.Position[trigger_anchor_str]
+            lines_json = json.dumps(line_config["lines"])
+            
+            cmd = [
+                python_exe,
+                "-u",
+                str(script_path),
+                str(video_path),
+                str(output_video),
+                str(output_json),
+                lines_json,
+                "--anchor", str(trigger_anchor_str),
+            ]
+            print(f"[ProcessRunner] Task {task_id} - Using MANUAL mode (process_manual.py)")
+        else:
+            # === CHẾ ĐỘ TỰ ĐỘNG ===
+            script_path = PROJECT_ROOT / "processing" / "process.py"
+            cmd = [
+                python_exe,
+                "-u",
+                str(script_path),
+                str(video_path),
+                str(output_video),
+                str(output_json)
+            ]
+            if single_lane:
+                cmd.append("--single-lane")
+            print(f"[ProcessRunner] Task {task_id} - Using AUTO mode (process.py)")
 
-        print(f"[ProcessRunner] Starting subprocess: {' '.join(cmd)}")
+        print(f"[ProcessRunner] Starting subprocess: {python_exe} -u {script_path.name} ...")
         print(f"[ProcessRunner] Timeout: {timeout_seconds}s ({timeout_seconds // 60} min)")
 
         # Khởi chạy subprocess với stdout/stderr dạng PIPE

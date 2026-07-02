@@ -7,7 +7,12 @@ import subprocess
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel
+
+class ManualLinesRequest(BaseModel):
+    lines: List[dict]
+    trigger_anchor: str = "BOTTOM_CENTER"
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, StreamingResponse
@@ -119,15 +124,27 @@ async def history():
 
 
 @app.post("/upload")
-async def upload_video(file: UploadFile = File(...), single_lane: bool = Form(False)):
+async def upload_video(file: UploadFile = File(...), single_lane: bool = Form(False), mode: str = Form("auto")):
     """
     Upload video for processing
+    
+    Args:
+        file: Video file
+        single_lane: True = 1 làn (auto mode), False = 2 làn (auto mode)
+        mode: "auto" | "manual"
     
     Returns:
         task_id: Unique identifier for this processing task
         status: queued
     """
     try:
+        # Validate mode
+        if mode not in ("auto", "manual"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Mode không hợp lệ: {mode}. Chỉ hỗ trợ 'auto' hoặc 'manual'"
+            )
+        
         # Validate file extension
         file_ext = Path(file.filename).suffix.lower()
         if file_ext not in SUPPORTED_VIDEO_FORMATS:
@@ -165,16 +182,28 @@ async def upload_video(file: UploadFile = File(...), single_lane: bool = Form(Fa
         # Create task in database
         db.create_task(task_id, file.filename)
         
-        # Start processing in background via subprocess
-        from app.process_runner import run_process_in_background
-        run_process_in_background(task_id, str(file_path), single_lane=single_lane)
-        
-        return {
-            "task_id": task_id,
-            "status": TASK_STATUS_QUEUED,
-            "message": "Video uploaded successfully. Processing started.",
-            "filename": file.filename,
-        }
+        if mode == "manual":
+            # Manual mode: don't auto-process, just upload
+            # User will draw lines and trigger processing later
+            return {
+                "task_id": task_id,
+                "status": "uploaded",
+                "mode": "manual",
+                "message": "Video uploaded. Please draw counting lines and click process.",
+                "filename": file.filename,
+            }
+        else:
+            # Auto mode: start processing immediately
+            from app.process_runner import run_process_in_background
+            run_process_in_background(task_id, str(file_path), single_lane=single_lane)
+            
+            return {
+                "task_id": task_id,
+                "status": TASK_STATUS_QUEUED,
+                "mode": "auto",
+                "message": "Video uploaded successfully. Processing started.",
+                "filename": file.filename,
+            }
     
     except HTTPException:
         raise
@@ -386,12 +415,202 @@ async def delete_task(task_id: str):
 
 
 # ============================================================================
+# Manual Line Config Endpoints
+# ============================================================================
+
+@app.get("/tasks/{task_id}/first-frame")
+async def get_first_frame(task_id: str):
+    """
+    Lấy frame đầu tiên của video để vẽ line thủ công.
+    Trả về ảnh JPEG.
+    """
+    try:
+        task = db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        # Tìm file video đã upload
+        import glob
+        input_pattern = str(UPLOADS_DIR / f"{task_id}*")
+        video_files = glob.glob(input_pattern)
+        
+        if not video_files:
+            raise HTTPException(status_code=404, detail="Video file not found")
+
+        video_path = video_files[0]
+
+        # Đọc frame đầu bằng OpenCV
+        import cv2
+        cap = cv2.VideoCapture(video_path)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret or frame is None:
+            raise HTTPException(status_code=500, detail="Cannot read video frame")
+
+        # Encode thành JPEG
+        import numpy as np
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+        _, img_encoded = cv2.imencode('.jpg', frame, encode_param)
+        
+        return StreamingResponse(
+            iter([img_encoded.tobytes()]),
+            media_type="image/jpeg",
+            headers={
+                "X-Video-Width": str(frame.shape[1]),
+                "X-Video-Height": str(frame.shape[0]),
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/tasks/{task_id}/manual-lines")
+async def save_manual_lines(task_id: str, lines: List[dict] = ..., trigger_anchor: str = "BOTTOM_CENTER"):
+    """
+    Lưu line config thủ công cho task.
+    
+    lines: Danh sách 1-2 line, mỗi phần tử dạng:
+        {
+            "id": "L1",
+            "label": "Line A",
+            "x1": 0, "y1": 540, "x2": 1920, "y2": 540,
+            "flip_direction": false,
+            "count_mode": "both"  # "both" | "in_only" | "out_only"
+        }
+    trigger_anchor: "BOTTOM_CENTER" | "CENTER" | "TOP_CENTER"
+    """
+    try:
+        task = db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        if not lines:
+            raise HTTPException(status_code=400, detail="Cần ít nhất 1 line để xử lý thủ công")
+
+        if len(lines) > 2:
+            raise HTTPException(status_code=400, detail="Chỉ hỗ trợ tối đa 2 line")
+
+        # Validate trigger_anchor
+        valid_anchors = {"BOTTOM_CENTER", "CENTER", "TOP_CENTER"}
+        if trigger_anchor not in valid_anchors:
+            raise HTTPException(status_code=400, detail=f"trigger_anchor phải thuộc {valid_anchors}")
+
+        # Lưu vào DB
+        db.save_line_config(task_id, lines, trigger_anchor)
+
+        return {
+            "message": "Line config saved successfully",
+            "task_id": task_id,
+            "lines_count": len(lines),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/tasks/{task_id}/manual-lines")
+async def get_manual_lines(task_id: str):
+    """Lấy line config đã lưu của task."""
+    try:
+        task = db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        config = db.get_line_config(task_id)
+        if not config:
+            return {"lines": [], "trigger_anchor": None}
+
+        return config
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/tasks/{task_id}/manual-lines")
+async def delete_manual_lines(task_id: str):
+    """Xóa line config của task."""
+    try:
+        task = db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        db.delete_line_config(task_id)
+        return {"message": "Line config deleted", "task_id": task_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/tasks/{task_id}/process")
+async def trigger_process(task_id: str):
+    """
+    Kích hoạt xử lý video (dùng cho manual mode sau khi vẽ line xong).
+    Kiểm tra line_config đã có, nếu chưa có thì báo lỗi.
+    """
+    try:
+        task = db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        if task["status"] in (TASK_STATUS_PROCESSING, TASK_STATUS_DONE):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Task đã ở trạng thái {task['status']}. Không thể xử lý lại."
+            )
+
+        # Kiểm tra line config cho manual mode
+        line_config = db.get_line_config(task_id)
+        if not line_config:
+            raise HTTPException(
+                status_code=400,
+                detail="Bạn cần vẽ line trước khi xử lý. Hãy vẽ ít nhất 1 line."
+            )
+
+        # Tìm file video
+        import glob
+        input_pattern = str(UPLOADS_DIR / f"{task_id}*")
+        video_files = glob.glob(input_pattern)
+
+        if not video_files:
+            raise HTTPException(status_code=404, detail="Video file not found")
+
+        video_path = video_files[0]
+
+        # Xử lý ngay
+        from app.process_runner import run_process_in_background
+        run_process_in_background(task_id, video_path, single_lane=False)
+
+        return {
+            "task_id": task_id,
+            "status": TASK_STATUS_QUEUED,
+            "mode": "manual",
+            "message": "Processing started with your custom lines.",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
 # Background Processing
 # ============================================================================
 
 def process_video_task(task_id: str, video_path: str):
     """
-    Background task to process video
+    Background task to process video.
+    Tự động phân biệt Auto vs Manual mode dựa trên line_config.
     """
     try:
         # Update status to processing
@@ -400,22 +619,43 @@ def process_video_task(task_id: str, video_path: str):
         # Prepare output paths
         output_video = OUTPUTS_DIR / f"{task_id}_output.mp4"
         output_json = OUTPUTS_DIR / f"{task_id}_result.json"
-        
-        # Call processing script via subprocess
-        from processing.process import process_video_file
-        
+
         def progress_callback(frame_num, total_frames, progress):
             """Update progress in database"""
             db.update_task_status(task_id, TASK_STATUS_PROCESSING, progress=progress)
-        
-        # Process video
-        results = process_video_file(
-            video_path,
-            str(output_video),
-            str(output_json),
-            callback=progress_callback,
-        )
-        
+
+        # Kiểm tra xem có line config không -> dispatch
+        line_config = db.get_line_config(task_id)
+
+        if line_config:
+            # === CHẾ ĐỘ THỦ CÔNG ===
+            print(f"[Process] Task {task_id} - Using MANUAL mode")
+            from processing.process_manual import process_video_file_manual
+            import supervision as sv
+
+            trigger_anchor_str = line_config.get("trigger_anchor", "BOTTOM_CENTER")
+            trigger_anchor = sv.Position[trigger_anchor_str]
+
+            results = process_video_file_manual(
+                video_path,
+                str(output_video),
+                str(output_json),
+                lines=line_config["lines"],
+                callback=progress_callback,
+                trigger_anchor=trigger_anchor,
+            )
+        else:
+            # === CHẾ ĐỘ TỰ ĐỘNG ===
+            print(f"[Process] Task {task_id} - Using AUTO mode")
+            from processing.process import process_video_file
+
+            results = process_video_file(
+                video_path,
+                str(output_video),
+                str(output_json),
+                callback=progress_callback,
+            )
+
         # Update task to done
         db.update_task_status(task_id, TASK_STATUS_DONE, progress=100)
         

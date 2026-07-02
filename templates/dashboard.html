@@ -86,11 +86,13 @@
               <div class="drop-label">Kéo thả file vào đây</div>
               <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
             </div>
+            <!-- Canvas for manual line drawing - positioned inside drop-zone -->
+            <canvas id="lineCanvas" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0;"></canvas>
             <img id="liveStream" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;" />
             <video id="outputVideo" controls style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;"></video>
           </div>
           <input type="file" id="fileInput" accept="video/*" />
-          <!-- Lane Mode Selector -->
+          <!-- Lane Mode Selector (Auto mode only) -->
           <div class="lane-selector" id="laneSelector">
             <div class="lane-selector-label">Chế độ làn đường:</div>
             <div class="lane-selector-options">
@@ -104,6 +106,73 @@
               </button>
             </div>
           </div>
+
+          <!-- Mode Selector (Auto vs Manual) -->
+          <div class="mode-selector" id="modeSelector">
+            <div class="mode-selector-label">Chế độ xử lý:</div>
+            <div class="mode-selector-options">
+              <button class="mode-btn active" id="modeAuto" data-mode="auto">
+                <span class="mode-icon">🤖</span>
+                <span class="mode-text">Tự động</span>
+                <span class="mode-desc">Hệ thống tự đặt line</span>
+              </button>
+              <button class="mode-btn" id="modeManual" data-mode="manual">
+                <span class="mode-icon">✏️</span>
+                <span class="mode-text">Vẽ thủ công</span>
+                <span class="mode-desc">Tự vẽ line đếm</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Trigger Anchor Selector (Manual mode only) -->
+          <div class="lane-selector" id="anchorSelector" style="display:none; margin-top: 12px; margin-bottom: 12px;">
+            <div class="lane-selector-label">Điểm kích hoạt đếm (Trigger):</div>
+            <div class="lane-selector-options">
+              <button class="lane-btn active" id="anchorBottom" data-anchor="BOTTOM_CENTER" title="Kích hoạt khi bánh xe chạm vạch">
+                <span class="lane-icon">🛹</span>
+                <span class="lane-text">Bánh xe (Dưới)</span>
+              </button>
+              <button class="lane-btn" id="anchorCenter" data-anchor="CENTER" title="Kích hoạt khi tâm xe chạm vạch (Khuyên dùng)">
+                <span class="lane-icon">🎯</span>
+                <span class="lane-text">Tâm xe (Giữa)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Line Drawing Tools -->
+          <div class="line-tools" id="lineTools">
+            <button class="tool-btn active" id="toolDraw" title="Vẽ line (Click kéo thả)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+              Vẽ line
+            </button>
+            <button class="tool-btn" id="toolSelect" title="Chọn/Sửa line">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M12.5 12.5l7.5 7.5"/></svg>
+              Chọn
+            </button>
+            <button class="tool-btn danger" id="toolDelete" title="Xóa line được chọn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Xóa
+            </button>
+            <button class="tool-btn" id="toolFlip" title="Đảo hướng IN/OUT">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16l-4-4 4-4"/><path d="M17 8l4 4-4 4"/><path d="M3 12h18"/></svg>
+              Đảo hướng
+            </button>
+          </div>
+
+          <!-- Line Info Tags -->
+          <div class="line-info" id="lineInfo"></div>
+
+          <!-- Process Button for Manual Mode -->
+          <button class="process-btn" id="processBtn" disabled>
+            <span id="processBtnText">Bắt đầu xử lý</span>
+          </button>
+
+          <!-- Warning Message -->
+          <div class="warning-msg" id="warningMsg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span id="warningText"></span>
+          </div>
+
           <div class="progress-section" id="progressSection" style="display:none;">
             <div class="progress-meta">
               <span class="progress-label" id="progressLabel">Chờ upload video...</span>
