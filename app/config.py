@@ -37,21 +37,21 @@ SUPPORTED_VIDEO_FORMATS = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv"}
 # Available models: yolov8n.pt (nano), yolov8s.pt (small), yolov8m.pt (medium), yolov8l.pt (large)
 MODEL_NAME = "yolov8s.pt"
 
-# Confidence thresholds - TĂNG để giảm false positive
-CONF_THRESHOLD = 0.35       # Chỉ detect khi model chắc chắn ≥35%
-COUNT_CONF_MIN = 0.40       # Chỉ đếm khi confidence ≥40% (cao hơn detect)
+# Confidence thresholds - GIẢM để bắt được nhiều xe hơn (đặc biệt xe ở xa hoặc bị che một phần)
+CONF_THRESHOLD = 0.20       # Giảm từ 0.35 xuống 0.20
+COUNT_CONF_MIN = 0.25       # Giảm từ 0.40 xuống 0.25
 
-# NMS IoU - GIẢM để giữ lại nhiều detections hơn
-IOU_THRESHOLD = 0.50         # Giảm từ 0.65 - tránh miss overlapping vehicles
+# NMS IoU - TĂNG để giữ lại nhiều detections hơn (cực kỳ quan trọng ở VN vì xe máy đi rất sát nhau, hay bị đè box)
+IOU_THRESHOLD = 0.70         # Tăng từ 0.50 lên 0.70 để không bị xóa nhầm xe đứng cạnh nhau
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SIZE FILTERING - Loại bỏ false detections quá nhỏ/lớn
 # ─────────────────────────────────────────────────────────────────────────────
 
-MIN_BOX_AREA = 400           # Diện tích tối thiểu (pixels²) - loại noise
+MIN_BOX_AREA = 100           # Giảm từ 400 xuống 100 để không bỏ sót xe máy ở xa
 MAX_BOX_AREA = 500000         # Diện tích tối đa - loại bỏ anomalies
-MIN_BOX_WIDTH = 20            # Chiều rộng tối thiểu
-MIN_BOX_HEIGHT = 20           # Chiều cao tối thiểu
+MIN_BOX_WIDTH = 10            # Chiều rộng tối thiểu
+MIN_BOX_HEIGHT = 10           # Chiều cao tối thiểu
 MAX_ASPECT_RATIO = 8.0        # Tỷ lệ width/height tối đa (xe không quá dài)
 MIN_ASPECT_RATIO = 0.15       # Tỷ lệ tối thiểu (xe không quá cao)
 
@@ -67,10 +67,10 @@ TEMPORAL_CONFIRM_FRAMES = 2   # Detect cần xuất hiện 2 frames liên tiếp
 # ─────────────────────────────────────────────────────────────────────────────
 
 # frame_rate sẽ được truyền động từ fps thực của video trong process.py
-TRACK_LOST_BUFFER = 45         # Giảm từ 60 - tránh phantom tracks (2s @ 22fps)
-TRACK_ACTIVATION_THRESHOLD = 0.30  # Tăng nhẹ - yêu cầu detection rõ hơn
-TRACK_MINIMUM_MATCHING = 0.80  # Tăng từ 0.7 - matching strict hơn
-TRACK_MINIMUM_CONSECUTIVE = 2  # Tăng từ 1 - cần 2 frames liên tiếp mới activate
+TRACK_LOST_BUFFER = 90         # Tăng lên 90 frames (khoảng 3s) để giữ ID khi xe lọt vào điểm mù hoặc bị xe tải che khuất
+TRACK_ACTIVATION_THRESHOLD = 0.20  # Giảm xuống 0.20 để dễ dàng bắt đầu theo dõi
+TRACK_MINIMUM_MATCHING = 0.50  # Giảm từ 0.8 xuống 0.5 để dễ khớp ID hơn khi xe chuyển làn gắt hoặc lạng lách
+TRACK_MINIMUM_CONSECUTIVE = 1  # Chỉ cần 1 frame là bắt đầu activate
 
 # LineZone Configuration
 LINE_ANCHOR = sv.Position.CENTER  # Sử dụng tâm hình học thay vì BOTTOM_CENTER để ổn định
