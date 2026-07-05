@@ -59,7 +59,6 @@
         <div class="card upload-card">
           <div class="upload-card-header">
             <div class="upload-card-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0041C8" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Tải lên &amp; Xử lý Video
             </div>
             <div class="badge-processing hidden" id="processingBadge">
@@ -68,7 +67,7 @@
           </div>
           <div class="drop-zone" id="dropZone">
             <div class="drop-zone-content" id="dropContent">
-              <div class="drop-icon">☁️</div>
+              <div class="drop-icon"></div>
               <div class="drop-label">Kéo thả file vào đây</div>
               <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
             </div>
@@ -83,11 +82,9 @@
             <div class="lane-selector-label">Chế độ làn đường:</div>
             <div class="lane-selector-options">
               <button class="lane-btn active" id="laneDual" data-mode="dual" title="Đường 2 chiều - 2 vạch kẻ IN/OUT">
-                <span class="lane-icon">↔️</span>
                 <span class="lane-text">2 Làn (IN & OUT)</span>
               </button>
               <button class="lane-btn" id="laneSingle" data-mode="single" title="Đường 1 chiều - 1 vạch kẻ ở giữa">
-                <span class="lane-icon">→</span>
                 <span class="lane-text">1 Làn (Đơn)</span>
               </button>
             </div>
@@ -98,12 +95,10 @@
             <div class="mode-selector-label">Chế độ xử lý:</div>
             <div class="mode-selector-options">
               <button class="mode-btn active" id="modeAuto" data-mode="auto">
-                <span class="mode-icon">🤖</span>
                 <span class="mode-text">Tự động</span>
                 <span class="mode-desc">Hệ thống tự đặt line</span>
               </button>
               <button class="mode-btn" id="modeManual" data-mode="manual">
-                <span class="mode-icon">✏️</span>
                 <span class="mode-text">Vẽ thủ công</span>
                 <span class="mode-desc">Tự vẽ line đếm</span>
               </button>
@@ -115,11 +110,9 @@
             <div class="lane-selector-label">Điểm kích hoạt đếm (Trigger):</div>
             <div class="lane-selector-options">
               <button class="lane-btn active" id="anchorBottom" data-anchor="BOTTOM_CENTER" title="Kích hoạt khi bánh xe chạm vạch">
-                <span class="lane-icon">🛹</span>
                 <span class="lane-text">Bánh xe (Dưới)</span>
               </button>
               <button class="lane-btn" id="anchorCenter" data-anchor="CENTER" title="Kích hoạt khi tâm xe chạm vạch (Khuyên dùng)">
-                <span class="lane-icon">🎯</span>
                 <span class="lane-text">Tâm xe (Giữa)</span>
               </button>
             </div>

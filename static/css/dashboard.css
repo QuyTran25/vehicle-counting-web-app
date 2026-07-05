@@ -24,7 +24,7 @@
   background: rgba(248,249,255,.6); position: relative; overflow: hidden;
 }
 .drop-zone:hover { border-color: var(--blue-primary); background: rgba(211,228,254,.25); }
-.drop-icon { font-size: 40px; margin-bottom: 8px; }
+.drop-icon { width: 48px; height: 48px; margin-bottom: 8px; background: var(--blue-light); border-radius: 50%; border: 2px dashed var(--blue-primary); }
 .drop-label { font-size: 16px; font-weight: 500; color: var(--text-dark); }
 .drop-hint { font-size: 15px; color: var(--text-mid); margin-top: 4px; }
 #fileInput { display: none; }

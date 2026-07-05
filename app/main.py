@@ -469,7 +469,7 @@ async def get_first_frame(task_id: str):
 
 
 @app.put("/tasks/{task_id}/manual-lines")
-async def save_manual_lines(task_id: str, lines: List[dict] = ..., trigger_anchor: str = "BOTTOM_CENTER"):
+async def save_manual_lines(task_id: str, request: ManualLinesRequest):
     """
     Lưu line config thủ công cho task.
     
@@ -487,6 +487,9 @@ async def save_manual_lines(task_id: str, lines: List[dict] = ..., trigger_ancho
         task = db.get_task(task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
+
+        lines = request.lines
+        trigger_anchor = request.trigger_anchor
 
         if not lines:
             raise HTTPException(status_code=400, detail="Cần ít nhất 1 line để xử lý thủ công")

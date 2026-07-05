@@ -116,10 +116,25 @@ function setProcessingMode(mode) {
     if (laneSelector) laneSelector.style.display = 'flex';
     if (anchorSelector) anchorSelector.style.display = 'none';
     resetCanvasOverlay();
+    if (lineTools) lineTools.style.display = 'none';
   } else {
     modeManual.classList.add('active');
     if (laneSelector) laneSelector.style.display = 'none';
     if (anchorSelector) anchorSelector.style.display = 'flex';
+    resetCanvasOverlay();
+    if (lineTools) lineTools.style.display = 'flex';
+    
+    // Reset and show the drop content for manual mode
+    const dropContent = document.getElementById('dropContent');
+    if (dropContent) {
+      dropContent.innerHTML = `
+        <div class="drop-icon"></div>
+        <div class="drop-label">Kéo thả file vào đây</div>
+        <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
+      `;
+      dropContent.style.display = 'flex';
+    }
+    showToast('Đã chuyển sang chế độ vẽ thủ công. Vui lòng upload video để bắt đầu vẽ line.');
   }
 }
 
@@ -133,7 +148,6 @@ function resetCanvasOverlay() {
   if (lineCanvas) lineCanvas.style.display = 'none';
   if (dropContent) dropContent.style.display = 'flex';
   
-  if (lineTools) lineTools.style.display = 'none';
   if (processBtn) processBtn.style.display = 'none';
   if (warningMsg) warningMsg.classList.remove('active');
   
@@ -739,10 +753,10 @@ function updateUI(result) {
   let totalOut = 0;
   
   const classStats = {
-    car: { in: 0, out: 0, label: 'Ô tô', icon: '🚗' },
-    motorcycle: { in: 0, out: 0, label: 'Xe máy', icon: '🛵' },
-    bus: { in: 0, out: 0, label: 'Xe buýt', icon: '🚌' },
-    truck: { in: 0, out: 0, label: 'Xe tải', icon: '🚚' }
+    car: { in: 0, out: 0, label: 'Ô tô', icon: '' },
+    motorcycle: { in: 0, out: 0, label: 'Xe máy', icon: '' },
+    bus: { in: 0, out: 0, label: 'Xe buýt', icon: '' },
+    truck: { in: 0, out: 0, label: 'Xe tải', icon: '' }
   };
 
   if (result.events && Array.isArray(result.events)) {
@@ -829,24 +843,13 @@ function updateUI(result) {
 // On Page Load
 window.addEventListener('DOMContentLoaded', () => {
   // Lane selector button handler (for auto mode)
-  const laneBtns = document.querySelectorAll('.lane-btn');
+  const laneBtns = document.querySelectorAll('#laneSelector .lane-btn');
   laneBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       laneBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       autoLaneMode = btn.dataset.mode;
-    });
-  });
-
-  // Anchor selector button handler (for manual mode)
-  const anchorBtns = document.querySelectorAll('#anchorSelector .lane-btn');
-  anchorBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      anchorBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      manualAnchorMode = btn.dataset.anchor;
     });
   });
 
