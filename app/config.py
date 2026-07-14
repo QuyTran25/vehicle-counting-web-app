@@ -69,11 +69,11 @@ TEMPORAL_CONFIRM_FRAMES = 2   # Detect cần xuất hiện 2 frames liên tiếp
 # frame_rate sẽ được truyền động từ fps thực của video trong process.py
 TRACK_LOST_BUFFER = 90         # Tăng lên 90 frames (khoảng 3s) để giữ ID khi xe lọt vào điểm mù hoặc bị xe tải che khuất
 TRACK_ACTIVATION_THRESHOLD = 0.20  # Giảm xuống 0.20 để dễ dàng bắt đầu theo dõi
-TRACK_MINIMUM_MATCHING = 0.50  # Giảm từ 0.8 xuống 0.5 để dễ khớp ID hơn khi xe chuyển làn gắt hoặc lạng lách
+TRACK_MINIMUM_MATCHING = 0.65  # Tăng từ 0.50 lên 0.65 để giảm ID fragmentation, vẫn đủ linh hoạt cho xe máy
 TRACK_MINIMUM_CONSECUTIVE = 1  # Chỉ cần 1 frame là bắt đầu activate
 
 # LineZone Configuration
-LINE_ANCHOR = sv.Position.CENTER  # Sử dụng tâm hình học thay vì BOTTOM_CENTER để ổn định
+LINE_ANCHOR = sv.Position.BOTTOM_CENTER  # Đồng bộ với manual mode - BOTTOM_CENTER cho camera góc cao
 LINE_START = (0, 540)
 LINE_END = (1920, 540)
 LINE_AUTO_Y_RATIO = 0.72   # 72% chiều cao → xe lớn hơn, tracking ổn định hơn khi qua line

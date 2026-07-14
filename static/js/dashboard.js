@@ -257,27 +257,33 @@ function handleVideoUpload(file) {
 
 function loadFirstFrame(taskId) {
   const url = `/tasks/${taskId}/first-frame`;
-  firstFrameImg = new Image();
-  firstFrameImg.onload = function() {
-    // Get original video dimensions from response headers
-    fetch(url)
-      .then(res => {
-        originalVideoWidth = parseInt(res.headers.get('X-Video-Width') || '1920');
-        originalVideoHeight = parseInt(res.headers.get('X-Video-Height') || '1080');
+  progressLabel.textContent = 'Đang lấy hình ảnh xem trước...';
+  
+  fetch(url)
+    .then(async res => {
+      if (!res.ok) throw new Error('Không thể tải frame video.');
+      originalVideoWidth = parseInt(res.headers.get('X-Video-Width') || '1920');
+      originalVideoHeight = parseInt(res.headers.get('X-Video-Height') || '1080');
+      
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      
+      firstFrameImg = new Image();
+      firstFrameImg.onload = function() {
         setupCanvas();
-      })
-      .catch(() => {
-        // Fallback dimensions
-        originalVideoWidth = firstFrameImg.naturalWidth || 1920;
-        originalVideoHeight = firstFrameImg.naturalHeight || 1080;
-        setupCanvas();
-      });
-  };
-  firstFrameImg.onerror = function() {
-    showToast('❌ Không thể tải frame video.');
-    progressLabel.textContent = 'Lỗi lấy hình ảnh xem trước.';
-  };
-  firstFrameImg.src = url;
+        URL.revokeObjectURL(objectUrl);
+      };
+      firstFrameImg.onerror = function() {
+        showToast('❌ Không thể tải frame video.');
+        progressLabel.textContent = 'Lỗi lấy hình ảnh xem trước.';
+        URL.revokeObjectURL(objectUrl);
+      };
+      firstFrameImg.src = objectUrl;
+    })
+    .catch(err => {
+      showToast('❌ ' + err.message);
+      progressLabel.textContent = 'Lỗi kết nối server.';
+    });
 }
 
 function setupCanvas() {
@@ -315,9 +321,9 @@ function resizeCanvas() {
   // Set internal canvas resolution to original video size for precise coordinate mapping
   lineCanvas.width = originalVideoWidth;
   lineCanvas.height = originalVideoHeight;
-  // CSS size to fit the drop-zone
-  lineCanvas.style.width = parentWidth + 'px';
-  lineCanvas.style.height = (parentWidth / videoAspect) + 'px';
+  // CSS size to naturally fit the drop-zone via HTML style
+  lineCanvas.style.width = '100%';
+  lineCanvas.style.height = 'auto';
   
   drawCanvas();
 }
@@ -670,6 +676,9 @@ function pollStatus(taskId) {
   const outputVideo = document.getElementById('outputVideo');
   const dropContent = document.getElementById('dropContent');
   
+  // Xóa interval cũ nếu có để tránh polling song song
+  if (window.statusInterval) clearInterval(window.statusInterval);
+  
   if (liveStream) {
     liveStream.src = `/stream/${taskId}`;
     liveStream.style.display = 'block';
@@ -677,7 +686,7 @@ function pollStatus(taskId) {
   if (outputVideo) outputVideo.style.display = 'none';
   if (dropContent) dropContent.style.display = 'none';
 
-  const interval = setInterval(() => {
+  window.statusInterval = setInterval(() => {
     fetch(`/status/${taskId}`)
     .then(res => {
       if (!res.ok) throw new Error('Lỗi kiểm tra trạng thái');
@@ -702,7 +711,7 @@ function pollStatus(taskId) {
         progressLabel.textContent = 'Hoàn thành phân tích!';
         progressFill.style.width = '100%';
         processingBadge.classList.add('hidden');
-        clearInterval(interval);
+        clearInterval(window.statusInterval);
         showToast('Xử lý video hoàn thành!');
         
         fetchResults(taskId);
@@ -714,7 +723,7 @@ function pollStatus(taskId) {
       } else if (data.status === 'failed') {
         progressLabel.textContent = `Lỗi: ${data.error_msg || 'Xử lý thất bại'}`;
         processingBadge.classList.add('hidden');
-        clearInterval(interval);
+        clearInterval(window.statusInterval);
         showToast('Lỗi xử lý video!');
         
         if (liveStream) {
@@ -727,7 +736,7 @@ function pollStatus(taskId) {
     .catch(err => {
       console.error(err);
     });
-  }, 1000);
+  }, 2000); // Polling mỗi 2 giây thay vì 1 giây
 }
 
 function updateUIRealtime(stats) {
@@ -795,9 +804,10 @@ function updateUI(result) {
   }).join('');
 
   const duration = Math.ceil(result.metadata.video_duration);
-  const labels = Array.from({length: duration + 1}, (_, i) => `${i}s`);
-  const inData = Array(duration + 1).fill(0);
-  const outData = Array(duration + 1).fill(0);
+  const safeDuration = Math.max(duration, 0); // Đảm bảo không âm
+  const labels = Array.from({length: safeDuration + 1}, (_, i) => `${i}s`);
+  const inData = Array(safeDuration + 1).fill(0);
+  const outData = Array(safeDuration + 1).fill(0);
 
   if (result.events && Array.isArray(result.events)) {
     result.events.forEach(evt => {
