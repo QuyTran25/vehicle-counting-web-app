@@ -411,19 +411,28 @@ async def delete_task(task_id: str):
             raise HTTPException(status_code=404, detail="Task not found")
         
         # Delete files
+        import glob
         input_pattern = str(UPLOADS_DIR / f"{task_id}*")
         output_pattern = str(OUTPUTS_DIR / f"{task_id}*")
         
-        import glob
+        deleted = 0
         for file in glob.glob(input_pattern):
-            Path(file).unlink(missing_ok=True)
+            try:
+                Path(file).unlink(missing_ok=True)
+                deleted += 1
+            except PermissionError:
+                pass  # File is locked by processing subprocess
         for file in glob.glob(output_pattern):
-            Path(file).unlink(missing_ok=True)
+            try:
+                Path(file).unlink(missing_ok=True)
+                deleted += 1
+            except PermissionError:
+                pass
         
         # Delete from database
         db.delete_task(task_id)
         
-        return {"message": "Task deleted successfully", "task_id": task_id}
+        return {"message": "Task deleted successfully", "task_id": task_id, "files_deleted": deleted}
     
     except HTTPException:
         raise

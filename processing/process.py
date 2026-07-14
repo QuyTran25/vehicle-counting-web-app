@@ -622,21 +622,23 @@ class VehicleDetector:
                 "total_frames": total_frames,
                 "resolution": video_info["resolution"],
                 "processed_frames": frame_number + 1,
-                "line_position": {
-                    "line_out": {
-                        "start": [line_out_start.x, line_out_start.y],
-                        "end": [line_out_end.x, line_out_end.y],
-                    },
-                    "line_in": {
-                        "start": [line_in_start.x, line_in_start.y],
-                        "end": [line_in_end.x, line_in_end.y],
-                    }
-                },
             },
             "summary": summary,
             "timeline": timeline,
             "events": all_events,
         }
+        
+        if not use_single_lane:
+            results["metadata"]["line_position"] = {
+                "line_out": {
+                    "start": [line_out_start.x, line_out_start.y],
+                    "end": [line_out_end.x, line_out_end.y],
+                },
+                "line_in": {
+                    "start": [line_in_start.x, line_in_start.y],
+                    "end": [line_in_end.x, line_in_end.y],
+                }
+            }
 
         with open(json_output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)

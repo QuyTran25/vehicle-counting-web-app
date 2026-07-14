@@ -390,25 +390,34 @@ def process_video_file_manual(
                         "events": all_events,
                     }
 
-                    with open(live_json_path, "w", encoding="utf-8") as f:
-                        json.dump(live_results, f, ensure_ascii=False)
-                except Exception:
-                    pass
+                    if (frame_number + 1) % 15 == 0:
+                        try:
+                            with open(live_json_path, "w", encoding="utf-8") as f:
+                                json.dump(live_results, f, ensure_ascii=False)
+                        except Exception:
+                            pass
 
-            if callback and total_frames > 0:
-                progress = int((frame_number / total_frames) * 100)
-                callback(frame_number, total_frames, progress)
+                if callback and total_frames > 0:
+                    progress = int((frame_number / total_frames) * 100)
+                    callback(frame_number, total_frames, progress)
 
-            if (frame_number + 1) % 60 == 0:
-                progress = int((frame_number / total_frames) * 100) if total_frames > 0 else 0
-                counts = ", ".join(f"{l.label}={l.total_count}" for l in manual_lines)
-                print(f"  ⏳ {progress}% — frame {frame_number + 1}/{total_frames} | {counts}")
+                if (frame_number + 1) % 15 == 0:
+                    progress = int((frame_number / total_frames) * 100) if total_frames > 0 else 0
+                    counts = ", ".join(f"{l.label}={l.total_count}" for l in manual_lines)
+                    print(f"  ⏳ {progress}% — frame {frame_number + 1}/{total_frames} | {counts}")
 
+    except Exception as e:
+        print(f"[Process] Exception during processing: {e}")
+        raise e
     finally:
-        writer.release()
+        if 'writer' in locals() and writer:
+            writer.release()
         # Cleanup live files
-        live_json_path.unlink(missing_ok=True)
-        live_img_path.unlink(missing_ok=True)
+        try:
+            live_json_path.unlink(missing_ok=True)
+            live_img_path.unlink(missing_ok=True)
+        except:
+            pass
         counts = ", ".join(f"{l.label}={l.total_count}" for l in manual_lines)
         print(f"\n✅ [Manual] Xử lý xong! {len(all_events)} events | {counts}")
 

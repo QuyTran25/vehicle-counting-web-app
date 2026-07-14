@@ -693,9 +693,11 @@ function pollStatus(taskId) {
       return res.json();
     })
     .then(data => {
+      console.log('[PollStatus]', data.status, 'live_stats:', data.live_stats ? 'YES' : 'NO', data.live_stats);
       const progress = data.progress || 0;
       
       if (data.live_stats) {
+        console.log('[Realtime] Calling updateUIRealtime with:', data.live_stats);
         updateUIRealtime(data.live_stats);
       }
       
@@ -736,7 +738,7 @@ function pollStatus(taskId) {
     .catch(err => {
       console.error(err);
     });
-  }, 2000); // Polling mỗi 2 giây thay vì 1 giây
+  }, 1000); // Polling mỗi 1 giây
 }
 
 function updateUIRealtime(stats) {
@@ -788,7 +790,7 @@ function updateUI(result) {
     });
   }
 
-  const totalVehicles = result.summary ? result.summary.total : (totalIn + totalOut);
+  const totalVehicles = (result.summary && result.summary.total != null) ? result.summary.total : (totalIn + totalOut);
 
   statTotal.textContent = totalVehicles.toLocaleString();
   statIn.textContent = totalIn.toLocaleString();
@@ -808,8 +810,17 @@ function updateUI(result) {
     `;
   }).join('');
 
-  // Sử dụng processed_duration để biểu đồ co giãn theo thời gian thực tế
-  const processedSeconds = Math.ceil(result.metadata.video_duration); 
+  // Xác định processedSeconds: dùng metadata nếu có, nếu không dùng events length
+  let totalDuration = 10; // default fallback
+  if (result.metadata && result.metadata.video_duration) {
+    totalDuration = Math.ceil(result.metadata.video_duration);
+  } else if (result.events && result.events.length > 0) {
+    const timestamps = result.events.map(e => e.timestamp || 0);
+    if (timestamps.length > 0) {
+      totalDuration = Math.ceil(Math.max(...timestamps)) + 1;
+    }
+  }
+  const processedSeconds = Math.max(totalDuration, 1);
   const labels = Array.from({length: processedSeconds + 1}, (_, i) => `${i}s`);
   const inData = Array(processedSeconds + 1).fill(0);
   const outData = Array(processedSeconds + 1).fill(0);
