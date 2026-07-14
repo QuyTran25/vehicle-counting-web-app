@@ -71,10 +71,10 @@
               <div class="drop-label">Kéo thả file vào đây</div>
               <div class="drop-hint">hoặc click để chọn tệp tin (MP4, AVI, MOV)</div>
             </div>
-            <!-- Canvas for manual line drawing - positioned inside drop-zone -->
+            <!-- Canvas for manual line drawing -->
             <canvas id="lineCanvas" style="display:none; width:100%; height:auto; border-radius:12px;"></canvas>
-            <img id="liveStream" style="display:none; width:100%; height:auto; border-radius:12px; background:#000;" />
-            <video id="outputVideo" controls style="display:none; width:100%; height:auto; border-radius:12px; background:#000;"></video>
+            <img id="liveStream" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;" />
+            <video id="outputVideo" controls style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px; position:absolute; top:0; left:0; background:#000;"></video>
           </div>
           <input type="file" id="fileInput" accept="video/*" />
           <!-- Lane Mode Selector (Auto mode only) -->
