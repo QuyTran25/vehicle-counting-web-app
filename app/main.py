@@ -235,15 +235,22 @@ async def get_status(task_id: str):
             "updated_at": task["updated_at"],
         }
         
-        # Load realtime stats if available
+        # Load realtime stats if available (with retry for Windows file locking)
         if task["status"] == TASK_STATUS_PROCESSING:
             live_json_path = OUTPUTS_DIR / f"{task_id}_live.json"
             if live_json_path.exists():
-                try:
-                    with open(live_json_path, "r", encoding="utf-8") as f:
-                        response["live_stats"] = json.load(f)
-                except Exception:
-                    pass
+                import time as _time
+                for _retry in range(3):
+                    try:
+                        with open(live_json_path, "r", encoding="utf-8") as f:
+                            raw = f.read()
+                        if raw.strip():
+                            response["live_stats"] = json.loads(raw)
+                        break
+                    except (json.JSONDecodeError, PermissionError, OSError):
+                        _time.sleep(0.05)
+                    except Exception:
+                        break
         
         return response
     
@@ -372,10 +379,20 @@ async def download_output(filename: str):
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
         
+        # Auto-detect MIME type for video files
+        ext = Path(filename).suffix.lower()
+        mime_map = {
+            ".mp4": "video/mp4",
+            ".avi": "video/x-msvideo",
+            ".mov": "video/quicktime",
+            ".json": "application/json",
+        }
+        media_type = mime_map.get(ext, "application/octet-stream")
+        
         return FileResponse(
             path=file_path,
             filename=filename,
-            media_type="application/octet-stream"
+            media_type=media_type
         )
     except HTTPException:
         raise

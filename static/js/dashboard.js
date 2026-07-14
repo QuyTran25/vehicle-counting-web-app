@@ -740,6 +740,11 @@ function pollStatus(taskId) {
 }
 
 function updateUIRealtime(stats) {
+  console.log('[Realtime] Stats received:', stats);
+  if (!stats || !stats.summary) {
+    console.warn('[Realtime] Stats empty, skipping UI update');
+    return;
+  }
   updateUI(stats);
 }
 
@@ -803,16 +808,16 @@ function updateUI(result) {
     `;
   }).join('');
 
-  const duration = Math.ceil(result.metadata.video_duration);
-  const safeDuration = Math.max(duration, 0); // Đảm bảo không âm
-  const labels = Array.from({length: safeDuration + 1}, (_, i) => `${i}s`);
-  const inData = Array(safeDuration + 1).fill(0);
-  const outData = Array(safeDuration + 1).fill(0);
+  // Sử dụng processed_duration để biểu đồ co giãn theo thời gian thực tế
+  const processedSeconds = Math.ceil(result.metadata.video_duration); 
+  const labels = Array.from({length: processedSeconds + 1}, (_, i) => `${i}s`);
+  const inData = Array(processedSeconds + 1).fill(0);
+  const outData = Array(processedSeconds + 1).fill(0);
 
   if (result.events && Array.isArray(result.events)) {
     result.events.forEach(evt => {
       const sec = Math.floor(evt.timestamp);
-      if (sec <= duration) {
+      if (sec <= processedSeconds) {
         if (evt.direction === 'in') {
           inData[sec]++;
         } else if (evt.direction === 'out') {
@@ -833,8 +838,8 @@ function updateUI(result) {
   trafficChartInstance.update();
 
   if (progressTime) {
-    const mins = Math.floor(duration / 60);
-    const secs = duration % 60;
+    const mins = Math.floor(processedSeconds / 60);
+    const secs = processedSeconds % 60;
     const durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     progressTime.textContent = `${durationStr} / ${durationStr}`;
   }
