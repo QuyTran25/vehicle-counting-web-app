@@ -123,7 +123,7 @@ function setProcessingMode(mode) {
     if (anchorSelector) anchorSelector.style.display = 'flex';
     resetCanvasOverlay();
     if (lineTools) lineTools.style.display = 'flex';
-    
+
     // Reset and show the drop content for manual mode
     const dropContent = document.getElementById('dropContent');
     if (dropContent) {
@@ -142,15 +142,15 @@ function resetCanvasOverlay() {
   const liveStream = document.getElementById('liveStream');
   const outputVideo = document.getElementById('outputVideo');
   const dropContent = document.getElementById('dropContent');
-  
+
   if (liveStream) liveStream.style.display = 'none';
   if (outputVideo) outputVideo.style.display = 'none';
   if (lineCanvas) lineCanvas.style.display = 'none';
   if (dropContent) dropContent.style.display = 'flex';
-  
+
   if (processBtn) processBtn.style.display = 'none';
   if (warningMsg) warningMsg.classList.remove('active');
-  
+
   manualLines = [];
   activeLineIndex = -1;
   firstFrameImg = null;
@@ -193,7 +193,7 @@ if (fileInput) {
 
 function handleVideoUpload(file) {
   if (!file) return;
-  
+
   // Validate file type
   const allowedExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv'];
   const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
@@ -219,36 +219,36 @@ function handleVideoUpload(file) {
     method: 'POST',
     body: formData
   })
-  .then(async res => {
-    if (!res.ok) {
-      let errorMsg = 'Tải lên thất bại';
-      try {
-        const errorData = await res.json();
-        errorMsg = errorData.detail || errorData.message || errorMsg;
-      } catch (e) {}
-      showToast('⚠️ ' + errorMsg);
-      progressLabel.textContent = 'Lỗi: ' + errorMsg;
-      return;
-    }
-    return res.json();
-  })
-  .then(data => {
-    if (!data) return;
-    currentTaskId = data.task_id;
+    .then(async res => {
+      if (!res.ok) {
+        let errorMsg = 'Tải lên thất bại';
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData.detail || errorData.message || errorMsg;
+        } catch (e) { }
+        showToast('⚠️ ' + errorMsg);
+        progressLabel.textContent = 'Lỗi: ' + errorMsg;
+        return;
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (!data) return;
+      currentTaskId = data.task_id;
 
-    if (currentMode === 'manual') {
-      showToast('✓ Đã tải video thành công. Vui lòng vẽ vạch đếm.');
-      progressLabel.textContent = 'Đang lấy frame đầu để vẽ line...';
-      loadFirstFrame(data.task_id);
-    } else {
-      showToast('✓ Tải video thành công, đang phân tích tự động.');
-      pollStatus(data.task_id);
-    }
-  })
-  .catch(err => {
-    showToast('❌ Lỗi kết nối: ' + err.message);
-    progressLabel.textContent = 'Lỗi kết nối server.';
-  });
+      if (currentMode === 'manual') {
+        showToast('✓ Đã tải video thành công. Vui lòng vẽ vạch đếm.');
+        progressLabel.textContent = 'Đang lấy frame đầu để vẽ line...';
+        loadFirstFrame(data.task_id);
+      } else {
+        showToast('✓ Tải video thành công, đang phân tích tự động.');
+        pollStatus(data.task_id);
+      }
+    })
+    .catch(err => {
+      showToast('❌ Lỗi kết nối: ' + err.message);
+      progressLabel.textContent = 'Lỗi kết nối server.';
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -258,22 +258,22 @@ function handleVideoUpload(file) {
 function loadFirstFrame(taskId) {
   const url = `/tasks/${taskId}/first-frame`;
   progressLabel.textContent = 'Đang lấy hình ảnh xem trước...';
-  
+
   fetch(url)
     .then(async res => {
       if (!res.ok) throw new Error('Không thể tải frame video.');
       originalVideoWidth = parseInt(res.headers.get('X-Video-Width') || '1920');
       originalVideoHeight = parseInt(res.headers.get('X-Video-Height') || '1080');
-      
+
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
-      
+
       firstFrameImg = new Image();
-      firstFrameImg.onload = function() {
+      firstFrameImg.onload = function () {
         setupCanvas();
         URL.revokeObjectURL(objectUrl);
       };
-      firstFrameImg.onerror = function() {
+      firstFrameImg.onerror = function () {
         showToast('❌ Không thể tải frame video.');
         progressLabel.textContent = 'Lỗi lấy hình ảnh xem trước.';
         URL.revokeObjectURL(objectUrl);
@@ -289,7 +289,7 @@ function loadFirstFrame(taskId) {
 function setupCanvas() {
   const dropContent = document.getElementById('dropContent');
   if (dropContent) dropContent.style.display = 'none';
-  
+
   // Show canvas inside drop-zone
   if (lineCanvas) {
     lineCanvas.style.display = 'block';
@@ -304,7 +304,7 @@ function setupCanvas() {
   // Resize canvas based on aspect ratio of the image and drop-zone dimensions
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-  
+
   // Attach Canvas Mouse Listeners
   lineCanvas.addEventListener('mousedown', handleMouseDown);
   lineCanvas.addEventListener('mousemove', handleMouseMove);
@@ -316,7 +316,7 @@ function resizeCanvas() {
   const dropZoneEl = document.getElementById('dropZone');
   const parent = dropZoneEl ? dropZoneEl.getBoundingClientRect() : { width: 800, height: 450 };
   const parentWidth = parent.width || 800;
-  
+
   const videoAspect = originalVideoWidth / originalVideoHeight;
   // Set internal canvas resolution to original video size for precise coordinate mapping
   lineCanvas.width = originalVideoWidth;
@@ -324,7 +324,7 @@ function resizeCanvas() {
   // CSS size to naturally fit the drop-zone via HTML style
   lineCanvas.style.width = '100%';
   lineCanvas.style.height = 'auto';
-  
+
   drawCanvas();
 }
 
@@ -334,7 +334,7 @@ function drawCanvas() {
   const w = lineCanvas.width;
   const h = lineCanvas.height;
   ctx.clearRect(0, 0, w, h);
-  
+
   if (firstFrameImg) {
     ctx.drawImage(firstFrameImg, 0, 0, w, h);
   }
@@ -343,7 +343,7 @@ function drawCanvas() {
   manualLines.forEach((line, index) => {
     const isSelected = (index === activeLineIndex);
     const color = isSelected ? '#ffc107' : (index === 0 ? '#00ffff' : '#ff8000');
-    
+
     // Points are already in canvas coordinates (which matches original video resolution)
     const x1 = line.x1;
     const y1 = line.y1;
@@ -382,7 +382,7 @@ function drawCanvas() {
     const py1 = (drawStartPoint.y / lineCanvas.height) * rect.height;
     const px2 = (drawStartPoint.currentX / lineCanvas.width) * rect.width;
     const py2 = (drawStartPoint.currentY / lineCanvas.height) * rect.height;
-    
+
     const ctx = lineCanvas.getContext('2d');
     ctx.save();
     ctx.strokeStyle = '#ffffff';
@@ -404,7 +404,7 @@ function drawDirectionArrow(ctx, x1, y1, x2, y2, isFlipped, color) {
 
   // Angle of the line
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  
+
   // Normal/perpendicular vector pointing one side (in vs out)
   const normAngle = angle + (isFlipped ? -Math.PI / 2 : Math.PI / 2);
   const arrowLength = 20;
@@ -459,7 +459,7 @@ function handleMouseDown(e) {
   } else if (activeTool === 'select') {
     let foundIndex = -1;
     let minDist = 15 * Math.max(lineCanvas.width / rect.width, lineCanvas.height / rect.height);
-    
+
     manualLines.forEach((line, index) => {
       const dist = distToSegment({ x, y }, { x: line.x1, y: line.y1 }, { x: line.x2, y: line.y2 });
       if (dist < minDist) {
@@ -489,7 +489,7 @@ function handleMouseMove(e) {
 function handleMouseUp(e) {
   if (!isDrawing || !drawStartPoint || !lineCanvas) return;
   isDrawing = false;
-  
+
   const rect = lineCanvas.getBoundingClientRect();
   const endCssX = e.clientX - rect.left;
   const endCssY = e.clientY - rect.top;
@@ -592,7 +592,7 @@ function updateLineInfoTags() {
   }).join('');
 }
 
-window.removeLineAtIndex = function(index, e) {
+window.removeLineAtIndex = function (index, e) {
   e.stopPropagation();
   manualLines.splice(index, 1);
   activeLineIndex = -1;
@@ -626,7 +626,7 @@ if (processBtn) {
       showToast('⚠️ Mời bạn vẽ ít nhất 1 line.');
       return;
     }
-    
+
     processBtn.disabled = true;
     processBtn.querySelector('#processBtnText').textContent = 'Đang kích hoạt...';
 
@@ -636,33 +636,33 @@ if (processBtn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines: manualLines, trigger_anchor: manualAnchorMode })
     })
-    .then(res => {
-      if (!res.ok) throw new Error('Không thể lưu line config.');
-      return res.json();
-    })
-    .then(() => {
-      // 2. Trigger Video Processing
-      return fetch(`/tasks/${currentTaskId}/process`, { method: 'POST' });
-    })
-    .then(res => {
-      if (!res.ok) throw new Error('Kích hoạt phân tích thất bại.');
-      return res.json();
-    })
-    .then(() => {
-      showToast('✓ Bắt đầu xử lý với vạch kẻ tùy chỉnh của bạn.');
-      if (canvasOverlay) canvasOverlay.classList.remove('active');
-      if (lineTools) lineTools.style.display = 'none';
-      if (processBtn) {
-        processBtn.style.display = 'none';
+      .then(res => {
+        if (!res.ok) throw new Error('Không thể lưu line config.');
+        return res.json();
+      })
+      .then(() => {
+        // 2. Trigger Video Processing
+        return fetch(`/tasks/${currentTaskId}/process`, { method: 'POST' });
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Kích hoạt phân tích thất bại.');
+        return res.json();
+      })
+      .then(() => {
+        showToast('✓ Bắt đầu xử lý với vạch kẻ tùy chỉnh của bạn.');
+        if (canvasOverlay) canvasOverlay.classList.remove('active');
+        if (lineTools) lineTools.style.display = 'none';
+        if (processBtn) {
+          processBtn.style.display = 'none';
+          processBtn.querySelector('#processBtnText').textContent = 'Bắt đầu xử lý';
+        }
+        pollStatus(currentTaskId);
+      })
+      .catch(err => {
+        showToast('❌ Lỗi: ' + err.message);
+        processBtn.disabled = false;
         processBtn.querySelector('#processBtnText').textContent = 'Bắt đầu xử lý';
-      }
-      pollStatus(currentTaskId);
-    })
-    .catch(err => {
-      showToast('❌ Lỗi: ' + err.message);
-      processBtn.disabled = false;
-      processBtn.querySelector('#processBtnText').textContent = 'Bắt đầu xử lý';
-    });
+      });
   });
 }
 
@@ -675,10 +675,10 @@ function pollStatus(taskId) {
   const liveStream = document.getElementById('liveStream');
   const outputVideo = document.getElementById('outputVideo');
   const dropContent = document.getElementById('dropContent');
-  
+
   // Xóa interval cũ nếu có để tránh polling song song
   if (window.statusInterval) clearInterval(window.statusInterval);
-  
+
   if (liveStream) {
     liveStream.src = `/stream/${taskId}`;
     liveStream.style.display = 'block';
@@ -688,63 +688,63 @@ function pollStatus(taskId) {
 
   window.statusInterval = setInterval(() => {
     fetch(`/status/${taskId}`)
-    .then(res => {
-      if (!res.ok) throw new Error('Lỗi kiểm tra trạng thái');
-      return res.json();
-    })
-    .then(data => {
-      console.log('[PollStatus]', data.status, 'live_stats:', data.live_stats ? 'YES' : 'NO', data.live_stats);
-      const progress = data.progress || 0;
-      
-      if (data.live_stats) {
-        console.log('[Realtime] Calling updateUIRealtime with:', data.live_stats);
-        updateUIRealtime(data.live_stats);
-      }
-      
-      if (data.status === 'queued') {
-        progressLabel.textContent = 'Đang chờ xử lý...';
-        progressFill.style.width = '0%';
-        processingBadge.classList.add('hidden');
-      } else if (data.status === 'processing') {
-        progressLabel.textContent = `Tiến độ phân tích: ${progress}%`;
-        progressFill.style.width = `${progress}%`;
-        processingBadge.classList.remove('hidden');
-      } else if (data.status === 'done') {
-        progressLabel.textContent = 'Hoàn thành phân tích!';
-        progressFill.style.width = '100%';
-        processingBadge.classList.add('hidden');
-        clearInterval(window.statusInterval);
-        showToast('Xử lý video hoàn thành!');
-        
-        fetchResults(taskId);
-        
-        if (liveStream) {
-          liveStream.style.display = 'none';
-          liveStream.src = '';
+      .then(res => {
+        if (!res.ok) throw new Error('Lỗi kiểm tra trạng thái');
+        return res.json();
+      })
+      .then(data => {
+        const progress = data.progress || 0;
+        console.log('[PollStatus]', data.status, 'live_stats:', data.live_stats ? 'YES' : 'NO');
+
+        if (data.live_stats) {
+          console.log('[Realtime] Calling updateUIRealtime...');
+          updateUIRealtime(data.live_stats);
         }
-      } else if (data.status === 'failed') {
-        progressLabel.textContent = `Lỗi: ${data.error_msg || 'Xử lý thất bại'}`;
-        processingBadge.classList.add('hidden');
-        clearInterval(window.statusInterval);
-        showToast('Lỗi xử lý video!');
-        
-        if (liveStream) {
-          liveStream.style.display = 'none';
-          liveStream.src = '';
+
+        if (data.status === 'queued') {
+          progressLabel.textContent = 'Đang chờ xử lý...';
+          progressFill.style.width = '0%';
+          processingBadge.classList.add('hidden');
+        } else if (data.status === 'processing') {
+          progressLabel.textContent = `Tiến độ phân tích: ${progress}%`;
+          progressFill.style.width = `${progress}%`;
+          processingBadge.classList.remove('hidden');
+        } else if (data.status === 'done') {
+          progressLabel.textContent = 'Hoàn thành phân tích!';
+          progressFill.style.width = '100%';
+          processingBadge.classList.add('hidden');
+          clearInterval(window.statusInterval);
+          showToast('Xử lý video hoàn thành!');
+
+          fetchResults(taskId);
+
+          if (liveStream) {
+            liveStream.style.display = 'none';
+            liveStream.src = '';
+          }
+        } else if (data.status === 'failed') {
+          progressLabel.textContent = `Lỗi: ${data.error_msg || 'Xử lý thất bại'}`;
+          processingBadge.classList.add('hidden');
+          clearInterval(window.statusInterval);
+          showToast('Lỗi xử lý video!');
+
+          if (liveStream) {
+            liveStream.style.display = 'none';
+            liveStream.src = '';
+          }
+          if (dropContent) dropContent.style.display = 'flex';
         }
-        if (dropContent) dropContent.style.display = 'flex';
-      }
-    })
-    .catch(err => {
-      console.error(err);
-    });
-  }, 1000); // Polling mỗi 1 giây
+      })
+      .catch(err => {
+        console.error(err);
+      });
+  }, 2000); // Polling mỗi 2 giây thay vì 1 giây
 }
 
 function updateUIRealtime(stats) {
   console.log('[Realtime] Stats received:', stats);
-  if (!stats || !stats.summary) {
-    console.warn('[Realtime] Stats empty, skipping UI update');
+  if (!stats || !stats.events) {
+    console.warn('[Realtime] No events in stats, skipping');
     return;
   }
   updateUI(stats);
@@ -752,117 +752,114 @@ function updateUIRealtime(stats) {
 
 function fetchResults(taskId) {
   fetch(`/result/${taskId}`)
-  .then(res => {
-    if (!res.ok) throw new Error('Không thể tải kết quả');
-    return res.json();
-  })
-  .then(result => {
-    updateUI(result);
-  })
-  .catch(err => {
-    showToast('Lỗi tải kết quả: ' + err.message);
-  });
+    .then(res => {
+      if (!res.ok) throw new Error('Không thể tải kết quả');
+      return res.json();
+    })
+    .then(result => {
+      updateUI(result);
+    })
+    .catch(err => {
+      showToast('Lỗi tải kết quả: ' + err.message);
+    });
 }
 
 function updateUI(result) {
-  let totalIn = 0;
-  let totalOut = 0;
-  
-  const classStats = {
-    car: { in: 0, out: 0, label: 'Ô tô', icon: '' },
-    motorcycle: { in: 0, out: 0, label: 'Xe máy', icon: '' },
-    bus: { in: 0, out: 0, label: 'Xe buýt', icon: '' },
-    truck: { in: 0, out: 0, label: 'Xe tải', icon: '' }
-  };
+  try {
+    let totalIn = 0;
+    let totalOut = 0;
 
-  if (result.events && Array.isArray(result.events)) {
-    result.events.forEach(evt => {
-      let cls = evt.class;
-      if (cls === 'motorbike') cls = 'motorcycle';
-      
-      if (evt.direction === 'in') {
-        totalIn++;
-        if (classStats[cls]) classStats[cls].in++;
-      } else if (evt.direction === 'out') {
-        totalOut++;
-        if (classStats[cls]) classStats[cls].out++;
-      }
-    });
-  }
+    const classStats = {
+      car: { in: 0, out: 0, label: 'Ô tô', icon: '' },
+      motorcycle: { in: 0, out: 0, label: 'Xe máy', icon: '' },
+      bus: { in: 0, out: 0, label: 'Xe buýt', icon: '' },
+      truck: { in: 0, out: 0, label: 'Xe tải', icon: '' }
+    };
 
-  const totalVehicles = (result.summary && result.summary.total != null) ? result.summary.total : (totalIn + totalOut);
+    if (result.events && Array.isArray(result.events)) {
+      result.events.forEach(evt => {
+        let cls = evt.class;
+        if (cls === 'motorbike') cls = 'motorcycle';
 
-  statTotal.textContent = totalVehicles.toLocaleString();
-  statIn.textContent = totalIn.toLocaleString();
-  statOut.textContent = totalOut.toLocaleString();
-
-  vehicleList.innerHTML = Object.keys(classStats).map(key => {
-    const stat = classStats[key];
-    return `
-      <div class="vehicle-row">
-        <div class="vehicle-name"><span class="vehicle-icon">${stat.icon}</span>${stat.label}</div>
-        <div class="vehicle-counts">
-          <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">${stat.in}</span></div>
-          <div class="vdivider"></div>
-          <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">${stat.out}</span></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Xác định processedSeconds: dùng metadata nếu có, nếu không dùng events length
-  let totalDuration = 10; // default fallback
-  if (result.metadata && result.metadata.video_duration) {
-    totalDuration = Math.ceil(result.metadata.video_duration);
-  } else if (result.events && result.events.length > 0) {
-    const timestamps = result.events.map(e => e.timestamp || 0);
-    if (timestamps.length > 0) {
-      totalDuration = Math.ceil(Math.max(...timestamps)) + 1;
-    }
-  }
-  const processedSeconds = Math.max(totalDuration, 1);
-  const labels = Array.from({length: processedSeconds + 1}, (_, i) => `${i}s`);
-  const inData = Array(processedSeconds + 1).fill(0);
-  const outData = Array(processedSeconds + 1).fill(0);
-
-  if (result.events && Array.isArray(result.events)) {
-    result.events.forEach(evt => {
-      const sec = Math.floor(evt.timestamp);
-      if (sec <= processedSeconds) {
         if (evt.direction === 'in') {
-          inData[sec]++;
+          totalIn++;
+          if (classStats[cls]) classStats[cls].in++;
         } else if (evt.direction === 'out') {
-          outData[sec]++;
+          totalOut++;
+          if (classStats[cls]) classStats[cls].out++;
         }
-      }
-    });
-  }
+      });
+    }
 
-  let cumIn = 0;
-  let cumOut = 0;
-  const cumInData = inData.map(val => cumIn += val);
-  const cumOutData = outData.map(val => cumOut += val);
+    const totalVehicles = (result.summary && result.summary.total != null) ? result.summary.total : (totalIn + totalOut);
 
-  trafficChartInstance.data.labels = labels;
-  trafficChartInstance.data.datasets[0].data = cumInData;
-  trafficChartInstance.data.datasets[1].data = cumOutData;
-  trafficChartInstance.update();
+    statTotal.textContent = totalVehicles.toLocaleString();
+    statIn.textContent = totalIn.toLocaleString();
+    statOut.textContent = totalOut.toLocaleString();
 
-  if (progressTime) {
-    const mins = Math.floor(processedSeconds / 60);
-    const secs = processedSeconds % 60;
-    const durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    progressTime.textContent = `${durationStr} / ${durationStr}`;
-  }
+    vehicleList.innerHTML = Object.keys(classStats).map(key => {
+      const stat = classStats[key];
+      return `
+        <div class="vehicle-row">
+          <div class="vehicle-name"><span class="vehicle-icon">${stat.icon}</span>${stat.label}</div>
+          <div class="vehicle-counts">
+            <div class="vehicle-dir"><span class="dir-lbl">VÀO</span><span class="dir-val-in">${stat.in}</span></div>
+            <div class="vdivider"></div>
+            <div class="vehicle-dir"><span class="dir-lbl">RA</span><span class="dir-val-out">${stat.out}</span></div>
+          </div>
+        </div>
+      `;
+    }).join('');
 
-  const outputVideo = document.getElementById('outputVideo');
-  const dropContent = document.getElementById('dropContent');
-  const liveStream = document.getElementById('liveStream');
-  if (outputVideo && result.output_video) {
-    outputVideo.src = result.output_video;
-    outputVideo.style.display = 'block';
-    if (dropContent) dropContent.style.display = 'none';
-    if (liveStream) liveStream.style.display = 'none';
+    const duration = (result.metadata && result.metadata.video_duration != null)
+      ? Math.ceil(result.metadata.video_duration)
+      : Math.max(totalIn + totalOut, 10);
+    const safeDuration = Math.max(duration, 0);
+    const labels = Array.from({ length: safeDuration + 1 }, (_, i) => `${i}s`);
+    const inData = Array(safeDuration + 1).fill(0);
+    const outData = Array(safeDuration + 1).fill(0);
+
+    if (result.events && Array.isArray(result.events)) {
+      result.events.forEach(evt => {
+        const sec = Math.floor(evt.timestamp);
+        if (sec <= safeDuration) {
+          if (evt.direction === 'in') {
+            inData[sec]++;
+          } else if (evt.direction === 'out') {
+            outData[sec]++;
+          }
+        }
+      });
+    }
+
+    let cumIn = 0;
+    let cumOut = 0;
+    const cumInData = inData.map(val => cumIn += val);
+    const cumOutData = outData.map(val => cumOut += val);
+
+    trafficChartInstance.data.labels = labels;
+    trafficChartInstance.data.datasets[0].data = cumInData;
+    trafficChartInstance.data.datasets[1].data = cumOutData;
+    trafficChartInstance.update();
+
+    if (progressTime) {
+      const mins = Math.floor(safeDuration / 60);
+      const secs = safeDuration % 60;
+      const durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      progressTime.textContent = `${durationStr} / ${durationStr}`;
+    }
+
+    const outputVideo = document.getElementById('outputVideo');
+    const dropContent = document.getElementById('dropContent');
+    const liveStream = document.getElementById('liveStream');
+    if (outputVideo && result.output_video) {
+      outputVideo.src = result.output_video;
+      outputVideo.style.display = 'block';
+      if (dropContent) dropContent.style.display = 'none';
+      if (liveStream) liveStream.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('[updateUI] Error:', err);
   }
 }
 
@@ -892,12 +889,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const taskId = urlParams.get('task_id');
-  
+
   if (taskId) {
     if (progressSection) progressSection.style.display = 'block';
     progressLabel.textContent = 'Đang tải kết quả...';
     progressFill.style.width = '20%';
-    
+
     fetch(`/status/${taskId}`)
       .then(res => res.json())
       .then(data => {

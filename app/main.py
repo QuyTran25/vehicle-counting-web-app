@@ -235,22 +235,15 @@ async def get_status(task_id: str):
             "updated_at": task["updated_at"],
         }
         
-        # Load realtime stats if available (with retry for Windows file locking)
+        # Load realtime stats if available
         if task["status"] == TASK_STATUS_PROCESSING:
             live_json_path = OUTPUTS_DIR / f"{task_id}_live.json"
             if live_json_path.exists():
-                import time as _time
-                for _retry in range(3):
-                    try:
-                        with open(live_json_path, "r", encoding="utf-8") as f:
-                            raw = f.read()
-                        if raw.strip():
-                            response["live_stats"] = json.loads(raw)
-                        break
-                    except (json.JSONDecodeError, PermissionError, OSError):
-                        _time.sleep(0.05)
-                    except Exception:
-                        break
+                try:
+                    with open(live_json_path, "r", encoding="utf-8") as f:
+                        response["live_stats"] = json.load(f)
+                except Exception:
+                    pass
         
         return response
     
@@ -379,20 +372,10 @@ async def download_output(filename: str):
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Auto-detect MIME type for video files
-        ext = Path(filename).suffix.lower()
-        mime_map = {
-            ".mp4": "video/mp4",
-            ".avi": "video/x-msvideo",
-            ".mov": "video/quicktime",
-            ".json": "application/json",
-        }
-        media_type = mime_map.get(ext, "application/octet-stream")
-        
         return FileResponse(
             path=file_path,
             filename=filename,
-            media_type=media_type
+            media_type="application/octet-stream"
         )
     except HTTPException:
         raise
@@ -411,28 +394,19 @@ async def delete_task(task_id: str):
             raise HTTPException(status_code=404, detail="Task not found")
         
         # Delete files
-        import glob
         input_pattern = str(UPLOADS_DIR / f"{task_id}*")
         output_pattern = str(OUTPUTS_DIR / f"{task_id}*")
         
-        deleted = 0
+        import glob
         for file in glob.glob(input_pattern):
-            try:
-                Path(file).unlink(missing_ok=True)
-                deleted += 1
-            except PermissionError:
-                pass  # File is locked by processing subprocess
+            Path(file).unlink(missing_ok=True)
         for file in glob.glob(output_pattern):
-            try:
-                Path(file).unlink(missing_ok=True)
-                deleted += 1
-            except PermissionError:
-                pass
+            Path(file).unlink(missing_ok=True)
         
         # Delete from database
         db.delete_task(task_id)
         
-        return {"message": "Task deleted successfully", "task_id": task_id, "files_deleted": deleted}
+        return {"message": "Task deleted successfully", "task_id": task_id}
     
     except HTTPException:
         raise
