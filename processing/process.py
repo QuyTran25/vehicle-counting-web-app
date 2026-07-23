@@ -332,9 +332,13 @@ class VehicleDetector:
 
         # ── 5. Setup LineZones ──
         # ── 5. Setup LineZones ──
+        # Khởi tạo giá trị mặc định để tránh UnboundLocalError
+        line_out_start = line_out_end = line_in_start = line_in_end = None
+        
         # use_single_lane = True → chỉ 1 line cho đường 1 chiều
         # use_single_lane = False → 2 line (Left=OUT, Right=IN)
         use_single_lane = single_lane or IS_SINGLE_LANE
+
         
         if use_single_lane:
             # 1 LineZone duy nhất ở giữa
@@ -624,13 +628,14 @@ class VehicleDetector:
                 "processed_frames": frame_number + 1,
                 "line_position": {
                     "line_out": {
-                        "start": [line_out_start.x, line_out_start.y],
-                        "end": [line_out_end.x, line_out_end.y],
+                        "start": [line_out_start.x, line_out_start.y] if line_out_start else None,
+                        "end": [line_out_end.x, line_out_end.y] if line_out_end else None,
                     },
                     "line_in": {
-                        "start": [line_in_start.x, line_in_start.y],
-                        "end": [line_in_end.x, line_in_end.y],
+                        "start": [line_in_start.x, line_in_start.y] if line_in_start else None,
+                        "end": [line_in_end.x, line_in_end.y] if line_in_end else None,
                     }
+
                 },
             },
             "summary": summary,
