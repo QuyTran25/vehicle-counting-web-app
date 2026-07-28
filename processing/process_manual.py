@@ -356,6 +356,7 @@ def process_video_file_manual(
                             "total_frames": total_frames,
                             "resolution": f"{width}x{height}",
                             "processed_frames": frame_number + 1,
+                            "lines": [line.to_metadata() for line in manual_lines],
                         },
                         "summary": live_summary,
                         "timeline": live_timeline,

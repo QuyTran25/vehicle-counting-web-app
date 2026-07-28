@@ -776,15 +776,74 @@ function updateUI(result) {
       truck: { in: 0, out: 0, label: 'Xe tải', icon: '' }
     };
 
-    if (result.events && Array.isArray(result.events)) {
+    // Build flip_direction map for chart/event calculations
+    const lineFlipMap = {};
+    let isManualMode = false;
+    let useMetadataCount = false;
+    const linesMetadata = (result.metadata && Array.isArray(result.metadata.lines))
+      ? result.metadata.lines
+      : [];
+
+    if (linesMetadata.length > 0) {
+      // Manual mode: use in_count/out_count per line directly (already correct in backend)
+      isManualMode = true;
+      useMetadataCount = true;   // ✅ flag to skip event loop
+      linesMetadata.forEach(l => {
+        lineFlipMap[l.id] = l.flip_direction;
+        // Each line has ONE direction: total goes entirely to VÀO or RA
+        // flip_direction=false (arrow IN) → ALL vehicles = VÀO
+        // flip_direction=true  (arrow OUT) → ALL vehicles = RA
+        const total = (l.in_count || 0) + (l.out_count || 0);
+        const lVao = l.flip_direction ? 0 : total;
+        const lRa  = l.flip_direction ? total : 0;
+        totalIn  += lVao;
+        totalOut += lRa;
+        // class breakdown is not available per-line in metadata, so skip here
+      });
+    }
+
+    if (useMetadataCount && result.events && Array.isArray(result.events)) {
+      // Metadata gave us totals — now derive per-class breakdown from events
       result.events.forEach(evt => {
         let cls = evt.class;
         if (cls === 'motorbike') cls = 'motorcycle';
-
+        let displayDirection = evt.direction;
+        if (evt.line_id != null && lineFlipMap[evt.line_id] !== undefined) {
+          displayDirection = lineFlipMap[evt.line_id] ? 'out' : 'in';
+        }
+        if (displayDirection === 'in') {
+          if (classStats[cls]) classStats[cls].in++;
+        } else if (displayDirection === 'out') {
+          if (classStats[cls]) classStats[cls].out++;
+        }
+      });
+    } else if (!useMetadataCount && !isManualMode && result.events && Array.isArray(result.events)) {
+      // Auto mode: count directly from events (no metadata.lines and no manualLines)
+      result.events.forEach(evt => {
+        let cls = evt.class;
+        if (cls === 'motorbike') cls = 'motorcycle';
         if (evt.direction === 'in') {
           totalIn++;
           if (classStats[cls]) classStats[cls].in++;
         } else if (evt.direction === 'out') {
+          totalOut++;
+          if (classStats[cls]) classStats[cls].out++;
+        }
+      });
+    } else if (!useMetadataCount && isManualMode && result.events && Array.isArray(result.events)) {
+      // Manual mode fallback: count per-class + total from events using flip map
+      // (only when metadata.lines was not available to provide counts directly)
+      result.events.forEach(evt => {
+        let cls = evt.class;
+        if (cls === 'motorbike') cls = 'motorcycle';
+        let displayDirection = evt.direction;
+        if (evt.line_id != null && lineFlipMap[evt.line_id] !== undefined) {
+          displayDirection = lineFlipMap[evt.line_id] ? 'out' : 'in';
+        }
+        if (displayDirection === 'in') {
+          totalIn++;
+          if (classStats[cls]) classStats[cls].in++;
+        } else if (displayDirection === 'out') {
           totalOut++;
           if (classStats[cls]) classStats[cls].out++;
         }
@@ -823,9 +882,14 @@ function updateUI(result) {
       result.events.forEach(evt => {
         const sec = Math.floor(evt.timestamp);
         if (sec <= safeDuration) {
-          if (evt.direction === 'in') {
+          let displayDirection = evt.direction;
+          if (isManualMode && evt.line_id != null) {
+            const flipped = lineFlipMap[evt.line_id];
+            displayDirection = flipped ? 'out' : 'in';
+          }
+          if (displayDirection === 'in') {
             inData[sec]++;
-          } else if (evt.direction === 'out') {
+          } else if (displayDirection === 'out') {
             outData[sec]++;
           }
         }
