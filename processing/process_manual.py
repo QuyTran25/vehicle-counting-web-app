@@ -1,33 +1,5 @@
-"""
-Chế độ vẽ line thủ công (Manual Line Drawing Mode)
-====================================================
-QUY TẮC CÔ LẬP (bắt buộc tuân thủ khi maintain file này):
-- KHÔNG import, sửa, hay gọi bất kỳ thứ gì liên quan chế độ tự động:
-  compute_split_lines(), IS_SINGLE_LANE, LINE_START, LINE_END, LINE_AUTO_Y_RATIO,
-  hay hàm process_video() trong process.py.
-- CHỈ tái sử dụng phần hạ tầng ổn định: VehicleDetector (model + tracker) và
-  draw_custom_line_zone() (hàm vẽ line thuần túy, không phụ thuộc logic đếm).
-- Nếu process.py đổi cấu trúc VehicleDetector, chỉ cần sửa file này, không ai
-  khác bị ảnh hưởng ngược lại.
 
-Hỗ trợ 1 hoặc 2 line do người dùng vẽ tay (tùy video, không cố định).
-Trigger anchor mặc định: BOTTOM_CENTER — đây thực chất là default/khuyến nghị
-của chính thư viện supervision cho bài toán line-crossing (không phải CENTER),
-theo issue #844 của roboflow/supervision. Vẫn để config được vì góc camera/
-motorbike box vẫn có thể cần CENTER cho vài trường hợp cụ thể.
-
-FIX theo review (xem ghi chú "REVIEW FIX" ở từng chỗ):
-1. flip_direction: sv.LineZone xác định in/out dựa theo chiều vẽ start→end.
-   User vẽ trái→phải hay phải→trái đều hợp lệ, nên KHÔNG thể tự suy ra đúng-sai
-   từ hình học. Field này cho phép đảo nhãn in/out sau khi vẽ (FE hỏi user
-   xác nhận hướng bằng mũi tên, set flag nếu user chọn ngược).
-2. count_mode: "both" (default) | "in_only" | "out_only" — dùng cho line ở
-   đường 1 chiều, tránh false-count khi có nhiễu tracking đi ngược chiều.
-3. Confidence smoothing: dùng max confidence trong cửa sổ N frame gần nhất
-   của track_id thay vì confidence đúng khoảnh khắc cắt line — line.trigger()
-   chỉ true đúng 1 frame, nếu confidence tụt dưới ngưỡng đúng frame đó thì
-   mất đếm vĩnh viễn (nguyên nhân chính gây thiếu đếm ở line xa/nhỏ).
-"""
+import json
 import sys
 from collections import deque
 from pathlib import Path
@@ -443,7 +415,6 @@ def process_video_file_manual(
         "events": all_events,
     }
 
-    import json
     with open(json_output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
@@ -456,19 +427,7 @@ def process_video_file_manual(
 # CLI entry point — test độc lập, không cần DB/API
 # ──────────────────────────────────────────
 if __name__ == "__main__":
-    """
-    Chạy thủ công qua command-line:
-        python processing/process_manual.py <input> <output> <json> '<lines_json>'
 
-    Ví dụ 1 line:
-        python processing/process_manual.py uploads/test.mp4 outputs/out.mp4 outputs/result.json \
-            '[{"id":"L1","label":"Line A","x1":0,"y1":540,"x2":1920,"y2":540}]'
-
-    Ví dụ 2 line:
-        python processing/process_manual.py uploads/test.mp4 outputs/out.mp4 outputs/result.json \
-            '[{"id":"L1","label":"Vào","x1":0,"y1":400,"x2":960,"y2":400},
-              {"id":"L2","label":"Ra","x1":960,"y1":700,"x2":1920,"y2":700}]'
-    """
     import json as _json
     import supervision as _sv
 

@@ -650,7 +650,7 @@ if (processBtn) {
       })
       .then(() => {
         showToast('✓ Bắt đầu xử lý với vạch kẻ tùy chỉnh của bạn.');
-        if (canvasOverlay) canvasOverlay.classList.remove('active');
+        if (lineCanvas) lineCanvas.style.display = 'none';
         if (lineTools) lineTools.style.display = 'none';
         if (processBtn) {
           processBtn.style.display = 'none';
